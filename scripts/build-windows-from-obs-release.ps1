@@ -3,6 +3,7 @@ param(
   [string]$BuildDir = "build-obs-release",
   [string]$Config = "Release",
   [string]$DepsDir = ".deps",
+  [string]$CMakeExe = "",
   [switch]$SkipDownload,
   [switch]$InstallToProgramData
 )
@@ -10,12 +11,54 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
+function Invoke-NativeChecked {
+  param(
+    [Parameter(Mandatory=$true)][string]$Exe,
+    [Parameter(ValueFromRemainingArguments=$true)][string[]]$Args
+  )
+  & $Exe @Args
+  if ($LASTEXITCODE -ne 0) {
+    throw "Command failed with exit code ${LASTEXITCODE}: $Exe $($Args -join ' ')"
+  }
+}
+
+function Write-ObsConfigStub {
+  param(
+    [Parameter(Mandatory=$true)][string]$ObsSourcePath,
+    [Parameter(Mandatory=$true)][string]$Tag
+  )
+
+  $libobsDir = Join-Path $ObsSourcePath "libobs"
+  $obsconfig = Join-Path $libobsDir "obsconfig.h"
+  if (Test-Path $obsconfig) { return }
+
+  Write-Host "Creating fallback generated header: $obsconfig"
+  @"
+#pragma once
+
+#define OBS_DATA_PATH "data"
+#define OBS_PLUGIN_PATH "obs-plugins"
+#define OBS_PLUGIN_DESTINATION "obs-plugins/64bit"
+#define OBS_INSTALL_PREFIX "."
+#define OBS_RELEASE_CANDIDATE 0
+#define OBS_BETA 0
+"@ | Set-Content -Encoding ASCII $obsconfig
+}
+
 $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 try {
-  if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
-    throw "CMake was not found in PATH. Install CMake and enable 'Add CMake to PATH'."
+  if ([string]::IsNullOrWhiteSpace($CMakeExe)) {
+    $cmakeCmd = Get-Command cmake -ErrorAction SilentlyContinue
+    if (-not $cmakeCmd) {
+      throw "CMake was not found. Use build_plugin_single_click.bat so it can auto-detect Visual Studio bundled CMake, or install standalone CMake and add it to PATH."
+    }
+    $CMakeExe = $cmakeCmd.Source
   }
+  if (-not (Test-Path $CMakeExe)) {
+    throw "CMake executable was not found: $CMakeExe"
+  }
+  Write-Host "Using CMake: $CMakeExe"
   if (-not (Get-Command dumpbin -ErrorAction SilentlyContinue) -or -not (Get-Command lib -ErrorAction SilentlyContinue)) {
     throw "MSVC tools dumpbin/lib were not found. Run this from a Visual Studio x64 Developer Command Prompt, or use build_plugin_single_click.bat."
   }
@@ -109,26 +152,34 @@ try {
   if ($names.Count -eq 0) { throw "No C exports were parsed from obs.dll." }
   @("LIBRARY obs.dll", "EXPORTS") + ($names | Sort-Object -Unique | ForEach-Object { "  $_" }) | Set-Content -Encoding ASCII $defPath
   & lib /nologo /def:$defPath /machine:x64 /out:$libPath | Write-Host
+  if ($LASTEXITCODE -ne 0) { throw "lib.exe failed to generate OBS import library." }
   if (-not (Test-Path $libPath)) { throw "Failed to generate $libPath." }
 
+  Write-ObsConfigStub -ObsSourcePath $obsSource.FullName -Tag $tag
+
   Write-Host "Configuring ArSonKuPik OBS plugin..."
-  cmake -S . -B $BuildDir `
+  & $CMakeExe -S . -B $BuildDir `
     -DBUILD_OBS_PLUGIN=ON `
     -DBUILD_STANDALONE_TESTS=ON `
     -DARSONKUPIK_OBS_SOURCE_DIR="$($obsSource.FullName)" `
     -DARSONKUPIK_OBS_IMPLIB="$libPath"
+  if ($LASTEXITCODE -ne 0) { throw "CMake configure failed." }
 
   Write-Host "Building..."
-  cmake --build $BuildDir --config $Config
+  & $CMakeExe --build $BuildDir --config $Config
+  if ($LASTEXITCODE -ne 0) { throw "CMake build failed. No install/package step will run." }
 
   Write-Host "Installing to package/..."
-  cmake --install $BuildDir --config $Config --prefix "$root/package"
+  & $CMakeExe --install $BuildDir --config $Config --prefix "$root/package"
+  if ($LASTEXITCODE -ne 0) { throw "CMake install failed." }
 
   Write-Host "Creating OBS ProgramData-ready package..."
-  & "$root\scripts\package-windows-programdata.ps1"
+  & "$root\scripts\package-windows-programdata.ps1" -BuildDir $BuildDir -Config $Config
+  if ($LASTEXITCODE -ne 0) { throw "ProgramData packaging failed." }
 
   if ($InstallToProgramData) {
-    & "$root\scripts\package-windows-programdata.ps1" -InstallToProgramData
+    & "$root\scripts\package-windows-programdata.ps1" -BuildDir $BuildDir -Config $Config -InstallToProgramData
+    if ($LASTEXITCODE -ne 0) { throw "ProgramData install failed." }
   }
 
   Write-Host ""

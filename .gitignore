@@ -1,9 +1,51 @@
-build*/
+# Build folders
+build/
+build-*/
+out/
+.vs/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# Local dependency cache downloaded by one-click build
+.deps/
+
+# OBS package outputs
 package/
+package-*/
+package-programdata/
+artifacts/
+
+# Binaries and generated build products
 *.dll
-*.so
-*.dylib
-*.a
+*.exe
+*.pdb
+*.lib
+*.exp
+*.ilk
 *.obj
 *.o
+*.a
+*.so
+*.dylib
+*.zip
+*.7z
+*.tar
+*.tar.gz
+
+# Logs / temp
+*.log
+*.tmp
+*.bak
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+
+# OS/editor
 .DS_Store
+Thumbs.db
+.vscode/.browse.VC.db
+.vscode/ipch/

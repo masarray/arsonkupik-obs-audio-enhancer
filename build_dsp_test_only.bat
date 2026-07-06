@@ -8,16 +8,17 @@ echo  ArSonKuPik DSP Smoke Test - No OBS SDK Required
 echo ============================================================
 echo.
 
-where cmake >nul 2>nul
+call "%~dp0scripts\find-cmake.bat"
 if errorlevel 1 (
-  echo [ERROR] CMake was not found in PATH.
   pause
   exit /b 1
 )
+echo Using CMake: %CMAKE_EXE%
+echo.
 
-cmake -S . -B build-dsp -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
+"%CMAKE_EXE%" -S . -B build-dsp -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
 if errorlevel 1 goto failed
-cmake --build build-dsp --config Release
+"%CMAKE_EXE%" --build build-dsp --config Release
 if errorlevel 1 goto failed
 
 if exist build-dsp\Release\arsonkupik_dsp_smoke.exe (

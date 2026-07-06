@@ -8,18 +8,18 @@ echo  ArSonKuPik OBS Audio Enhancer - One Click Windows Build
 echo ============================================================
 echo.
 
-where cmake >nul 2>nul
+call "%~dp0scripts\find-cmake.bat"
 if errorlevel 1 (
-  echo [ERROR] CMake was not found in PATH.
-  echo Install CMake from https://cmake.org/download/ and enable Add CMake to PATH.
   pause
   exit /b 1
 )
+echo Using CMake: %CMAKE_EXE%
+echo.
 
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 if not exist "%VSWHERE%" (
-  echo [ERROR] Visual Studio 2022 was not found.
-  echo Install Visual Studio 2022 with Desktop development with C++ workload.
+  echo [ERROR] Visual Studio was not found.
+  echo Install Visual Studio 2022/2026 with Desktop development with C++ workload.
   pause
   exit /b 1
 )
@@ -46,6 +46,12 @@ echo generate a local obs.lib import library, build the plugin DLL,
 echo and create a ProgramData-ready plugin folder.
 echo.
 
+echo Cleaning previous build output, keeping downloaded OBS dependencies...
+if exist "%~dp0build-obs-release" rmdir /s /q "%~dp0build-obs-release"
+if exist "%~dp0package" rmdir /s /q "%~dp0package"
+if exist "%~dp0package-programdata" rmdir /s /q "%~dp0package-programdata"
+echo.
+
 echo Starting build...
 call "%VSDEVCMD%" -arch=x64 -host_arch=x64 >nul
 if errorlevel 1 (
@@ -54,7 +60,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\build-windows-from-obs-release.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\build-windows-from-obs-release.ps1" -CMakeExe "%CMAKE_EXE%"
 if errorlevel 1 (
   echo.
   echo [FAILED] Build failed. Please check the error above.

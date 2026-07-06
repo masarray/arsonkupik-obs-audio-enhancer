@@ -12,7 +12,7 @@ This repo includes two GitHub Actions workflows:
   - Generates a local `obs.lib` import library from `obs.dll`.
   - Builds `arsonkupik-obs-audio-enhancer.dll`.
   - Uploads a ready-to-install ZIP artifact.
-  - If you push a tag such as `v0.2.0`, it creates/updates a GitHub Release with the ZIP attached.
+  - If you push a tag such as `v0.2.1`, it creates/updates a GitHub Release with the ZIP attached.
 
 ## Publish as a public GitHub repo
 
@@ -46,8 +46,8 @@ After pushing to `main`, GitHub Actions will run automatically.
 To create a public release with the ready-to-install plugin ZIP:
 
 ```bat
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.2.1
+git push origin v0.2.1
 ```
 
 Then open the GitHub repository → Releases → download:

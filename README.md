@@ -154,7 +154,8 @@ This script tries to make the local build as automatic as possible:
 Output folder:
 
 ```text
-package-programdatarsonkupik-obs-audio-enhancer```
+package-programdata\arsonkupik-obs-audio-enhancer
+```
 
 To install after building:
 
@@ -172,7 +173,7 @@ This repository includes auto-build workflows:
 ```
 
 - Push to `main` → builds DSP smoke test and Windows OBS plugin artifact.
-- Push tag `v0.2.0` or newer → creates a GitHub Release with `arsonkupik-obs-audio-enhancer-windows-x64.zip`.
+- Push tag `v0.2.1` or newer → creates a GitHub Release with `arsonkupik-obs-audio-enhancer-windows-x64.zip`.
 
 See:
 
@@ -189,3 +190,16 @@ publish_public_repo.bat
 ```
 
 It creates a public GitHub repository and pushes this source package.
+
+## v0.2.4 Build Patch
+
+- Fixes one-click fallback build when raw OBS headers are missing generated `obsconfig.h`.
+- Fixes `scripts/package-windows-programdata.ps1` PowerShell array syntax.
+- Stops install/package step immediately when compile/link fails.
+- `build_plugin_single_click.bat` now cleans previous build output while keeping downloaded OBS dependencies.
+- Adds `clean_build_cache.bat`.
+
+
+## Repo hygiene / avoiding huge pushes
+
+The one-click build downloads OBS into `.deps/` and creates local output folders such as `build-obs-release/`, `package/`, and `package-programdata/`. These folders are intentionally ignored by Git. Run `cleanup_repo_before_push.bat` if a previous commit accidentally staged local build artifacts.

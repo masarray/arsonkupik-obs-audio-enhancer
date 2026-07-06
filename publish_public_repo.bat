@@ -43,6 +43,11 @@ if not exist .git (
   git branch -M main
 )
 
+echo.
+echo [INFO] Ensuring local build/dependency cache is not staged...
+git rm -r --cached .deps build build-dsp build-obs-release package package-programdata artifacts out 2>nul
+git rm -r --cached *.zip *.dll *.exe *.pdb *.lib *.exp *.ilk 2>nul
+
 git add .
 git commit -m "Initial ArSonKuPik OBS native audio enhancer" || echo No new commit needed.
 

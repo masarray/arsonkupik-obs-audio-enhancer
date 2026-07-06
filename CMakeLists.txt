@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(arsonkupik-obs-audio-enhancer VERSION 0.2.0 LANGUAGES CXX)
+project(arsonkupik-obs-audio-enhancer VERSION 0.2.4 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,6 +30,10 @@ if (BUILD_OBS_PLUGIN)
             "${ARSONKUPIK_OBS_SOURCE_DIR}/libobs"
             "${ARSONKUPIK_OBS_SOURCE_DIR}/deps"
             "${ARSONKUPIK_OBS_SOURCE_DIR}/deps/obs-scripting")
+        target_compile_definitions(arsonkupik_obs_headers INTERFACE
+            OBS_INSTALL_PREFIX="."
+            OBS_PLUGIN_PATH="obs-plugins"
+            OBS_PLUGIN_DESTINATION="obs-plugins/64bit")
         set(ARSONKUPIK_OBS_LINK_TARGET "${ARSONKUPIK_OBS_IMPLIB}")
         message(STATUS "Using fallback OBS headers/import-lib mode")
     else()

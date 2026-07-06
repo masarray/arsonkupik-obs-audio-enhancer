@@ -12,18 +12,21 @@ $dllName = "$pluginName.dll"
 Push-Location $root
 try {
   $dllCandidates = @(
-    Join-Path $root "$BuildDir\$Config\$dllName"),
-    Join-Path $root "$BuildDir\$dllName"),
-    Join-Path $root "package\obs-plugins\64bit\$dllName")
+    (Join-Path $root "$BuildDir\$Config\$dllName"),
+    (Join-Path $root "$BuildDir\$dllName"),
+    (Join-Path $root "package\obs-plugins\64bit\$dllName")
   )
 
   $dllPath = $null
   foreach ($candidate in $dllCandidates) {
-    if (Test-Path $candidate) { $dllPath = $candidate; break }
+    if (Test-Path $candidate) {
+      $dllPath = $candidate
+      break
+    }
   }
 
   if (-not $dllPath) {
-    throw "Plugin DLL not found. Build first with scripts\build-windows.ps1."
+    throw "Plugin DLL not found. Build first, then run this package script. Checked: $($dllCandidates -join '; ')"
   }
 
   $outRoot = Join-Path $root "package-programdata\$pluginName"
