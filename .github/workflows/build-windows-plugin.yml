@@ -82,38 +82,40 @@ jobs:
           Copy-Item -Path (Join-Path $PWD 'release\uninstall_windows.bat') -Destination (Join-Path $bundleRoot 'uninstall_windows.bat') -Force
           Copy-Item -Path (Join-Path $PWD 'release\README_INSTALL.txt') -Destination (Join-Path $bundleRoot 'README_INSTALL.txt') -Force
 
-          @"
-ArSonKuPik OBS Audio Enhancer
-Version: $version
-Build: ${{ github.run_number }}
-Commit: ${{ github.sha }}
+          $versionLines = @(
+            'ArSonKuPik OBS Audio Enhancer',
+            "Version: $version",
+            'Build: ${{ github.run_number }}',
+            'Commit: ${{ github.sha }}',
+            '',
+            'Install:',
+            '1. Extract this ZIP.',
+            '2. Close OBS Studio.',
+            '3. Double-click install_windows.bat.',
+            '4. Restart OBS Studio.'
+          )
+          $versionLines | Set-Content -Encoding UTF8 -Path (Join-Path $bundleRoot 'VERSION.txt')
 
-Install:
-1. Extract this ZIP.
-2. Close OBS Studio.
-3. Double-click install_windows.bat.
-4. Restart OBS Studio.
-"@ | Set-Content -Encoding UTF8 -Path (Join-Path $bundleRoot 'VERSION.txt')
-
-          @"
-# ArSonKuPik OBS Audio Enhancer $version
-
-Windows x64 ready-to-install OBS native audio filter package.
-
-## Install
-1. Download `ArSonKuPik-OBS-Audio-Enhancer-Windows-x64-$version.zip`.
-2. Extract the ZIP.
-3. Close OBS Studio.
-4. Double-click `install_windows.bat`.
-5. Restart OBS Studio.
-6. Add the filter from `Audio Source > Filters > + > ArSonKuPik Smart Enhancer`.
-
-## Included
-- Native OBS plugin folder: `$pluginName`
-- One-click installer: `install_windows.bat`
-- Uninstaller: `uninstall_windows.bat`
-- Install guide: `README_INSTALL.txt`
-"@ | Set-Content -Encoding UTF8 -Path (Join-Path $dist 'RELEASE_NOTES.md')
+          $releaseNotesLines = @(
+            "# ArSonKuPik OBS Audio Enhancer $version",
+            '',
+            'Windows x64 ready-to-install OBS native audio filter package.',
+            '',
+            '## Install',
+            "1. Download ArSonKuPik-OBS-Audio-Enhancer-Windows-x64-$version.zip.",
+            '2. Extract the ZIP.',
+            '3. Close OBS Studio.',
+            '4. Double-click install_windows.bat.',
+            '5. Restart OBS Studio.',
+            '6. Add the filter from Audio Source > Filters > + > ArSonKuPik Smart Enhancer.',
+            '',
+            '## Included',
+            "- Native OBS plugin folder: $pluginName",
+            '- One-click installer: install_windows.bat',
+            '- Uninstaller: uninstall_windows.bat',
+            '- Install guide: README_INSTALL.txt'
+          )
+          $releaseNotesLines | Set-Content -Encoding UTF8 -Path (Join-Path $dist 'RELEASE_NOTES.md')
 
           $zipName = "$releaseName-$version.zip"
           $zipPath = Join-Path $PWD $zipName
@@ -155,7 +157,6 @@ Windows x64 ready-to-install OBS native audio filter package.
             throw "Release tag must start with v, for example v0.2.5. Got: $tag"
           }
 
-          $zipName = '${{ steps.bundle.outputs.zip_name }}'
           $zipPath = '${{ steps.bundle.outputs.zip_path }}'
           $shaPath = '${{ steps.bundle.outputs.sha_path }}'
           $notes = Join-Path $PWD 'dist\RELEASE_NOTES.md'
