@@ -1,0 +1,5 @@
+preset=MasAri
+input_peak_db=-24.2728
+output_peak_db=-20.594
+gain_reduction_db=3.59948
+correlation=0.738099

@@ -1,0 +1,52 @@
+name: CI - DSP Core
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dsp-smoke:
+    name: DSP smoke test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure DSP-only build
+        run: cmake -S . -B build-dsp -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
+
+      - name: Build DSP smoke test
+        run: cmake --build build-dsp --config Release
+
+      - name: Run DSP smoke test on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem build-dsp -Recurse -Filter arsonkupik_dsp_smoke.exe | Select-Object -First 1
+          if (-not $exe) { throw 'arsonkupik_dsp_smoke.exe was not found.' }
+          & $exe.FullName | Tee-Object -FilePath dsp-smoke-result.txt
+
+      - name: Run DSP smoke test on Linux
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          exe=$(find build-dsp -type f -name 'arsonkupik_dsp_smoke' | head -n 1)
+          test -n "$exe"
+          "$exe" | tee dsp-smoke-result.txt
+
+      - name: Upload DSP smoke result
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsp-smoke-${{ matrix.os }}
+          path: dsp-smoke-result.txt

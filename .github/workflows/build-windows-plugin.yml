@@ -1,0 +1,66 @@
+name: Build Windows OBS Plugin
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      obs_version:
+        description: 'OBS Studio version/tag to build against, or latest'
+        required: true
+        default: 'latest'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-plugin:
+    name: Windows x64 plugin package
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC x64 and build plugin
+        shell: pwsh
+        run: |
+          $obsVersion = '${{ github.event.inputs.obs_version }}'
+          if ([string]::IsNullOrWhiteSpace($obsVersion)) { $obsVersion = 'latest' }
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vsInstall = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsInstall) { throw 'Visual Studio C++ toolchain was not found.' }
+          $vsDevCmd = Join-Path $vsInstall 'Common7\Tools\VsDevCmd.bat'
+          if (-not (Test-Path $vsDevCmd)) { throw "VsDevCmd.bat was not found: $vsDevCmd" }
+          $script = Join-Path $PWD 'scripts\build-windows-from-obs-release.ps1'
+          cmd /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 && powershell -NoProfile -ExecutionPolicy Bypass -File `"$script`" -OBSVersion `"$obsVersion`""
+
+      - name: Create distribution zip
+        shell: pwsh
+        run: |
+          $pkg = Join-Path $PWD 'package-programdata\arsonkupik-obs-audio-enhancer'
+          if (-not (Test-Path (Join-Path $pkg 'bin\64bit\arsonkupik-obs-audio-enhancer.dll'))) {
+            throw 'Built plugin DLL was not found in the ProgramData-ready package.'
+          }
+          Compress-Archive -Path $pkg -DestinationPath arsonkupik-obs-audio-enhancer-windows-x64.zip -Force
+
+      - name: Upload ready-to-install OBS plugin zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: arsonkupik-obs-audio-enhancer-windows-x64
+          path: arsonkupik-obs-audio-enhancer-windows-x64.zip
+
+      - name: Create GitHub Release for tags
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag arsonkupik-obs-audio-enhancer-windows-x64.zip --title "ArSonKuPik OBS Audio Enhancer $tag" --notes "Windows x64 OBS plugin package. Extract/copy the arsonkupik-obs-audio-enhancer folder into C:\ProgramData\obs-studio\plugins, then restart OBS."
+          } else {
+            gh release upload $tag arsonkupik-obs-audio-enhancer-windows-x64.zip --clobber
+          }
