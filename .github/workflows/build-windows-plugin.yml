@@ -17,7 +17,7 @@ on:
         options: [ 'false', 'true' ]
         default: 'false'
       release_tag:
-        description: 'Release tag for manual publish, for example v0.2.5'
+        description: 'Release tag for manual publish, for example v0.3.0'
         required: false
         default: ''
 
@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   build-windows-plugin:
-    name: Windows x64 ready-to-install package
+    name: Windows x64 installer and ZIP package
     runs-on: windows-latest
 
     steps:
@@ -50,12 +50,18 @@ jobs:
           cmd /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 && powershell -NoProfile -ExecutionPolicy Bypass -File `"$script`" -OBSVersion `"$obsVersion`""
           if ($LASTEXITCODE -ne 0) { throw "Build script failed with exit code ${LASTEXITCODE}." }
 
-      - name: Create ready-to-install user bundle
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "Chocolatey failed to install Inno Setup." }
+
+      - name: Create ready-to-install ZIP and EXE installer
         id: bundle
         shell: pwsh
         run: |
           $pluginName = 'arsonkupik-obs-audio-enhancer'
-          $releaseName = 'ArSonKuPik-OBS-Audio-Enhancer-Windows-x64'
+          $releaseBase = 'ArSonKuPik-OBS-Audio-Enhancer-Windows-x64'
           $pkg = Join-Path $PWD "package-programdata\$pluginName"
           $dll = Join-Path $pkg 'bin\64bit\arsonkupik-obs-audio-enhancer.dll'
           if (-not (Test-Path $dll)) {
@@ -72,8 +78,13 @@ jobs:
             }
           }
 
+          $installerVersion = $version.TrimStart('v')
+          if ($installerVersion -notmatch '^\d+(\.\d+){1,3}$') {
+            $installerVersion = '0.0.${{ github.run_number }}'
+          }
+
           $dist = Join-Path $PWD 'dist'
-          $bundleRoot = Join-Path $dist $releaseName
+          $bundleRoot = Join-Path $dist $releaseBase
           if (Test-Path $dist) { Remove-Item $dist -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $bundleRoot | Out-Null
 
@@ -88,55 +99,82 @@ jobs:
             'Build: ${{ github.run_number }}',
             'Commit: ${{ github.sha }}',
             '',
-            'Install:',
+            'User install:',
+            '1. Close OBS Studio.',
+            '2. Run ArSonKuPik-OBS-Audio-Enhancer-Setup.exe.',
+            '3. Restart OBS Studio.',
+            '',
+            'Advanced manual install:',
             '1. Extract this ZIP.',
-            '2. Close OBS Studio.',
-            '3. Double-click install_windows.bat.',
-            '4. Restart OBS Studio.'
+            '2. Run install_windows.bat as Administrator or copy the plugin folder manually.'
           )
           $versionLines | Set-Content -Encoding UTF8 -Path (Join-Path $bundleRoot 'VERSION.txt')
 
           $releaseNotesLines = @(
             "# ArSonKuPik OBS Audio Enhancer $version",
             '',
-            'Windows x64 ready-to-install OBS native audio filter package.',
+            'Native OBS Studio audio enhancer plugin release.',
             '',
-            '## Install',
-            "1. Download ArSonKuPik-OBS-Audio-Enhancer-Windows-x64-$version.zip.",
-            '2. Extract the ZIP.',
-            '3. Close OBS Studio.',
-            '4. Double-click install_windows.bat.',
-            '5. Restart OBS Studio.',
-            '6. Add the filter from Audio Source > Filters > + > ArSonKuPik Smart Enhancer.',
+            '## Recommended for most Windows users',
+            "Download ArSonKuPik-OBS-Audio-Enhancer-Setup-$version.exe, close OBS Studio, run the installer, then restart OBS.",
             '',
-            '## Included',
-            "- Native OBS plugin folder: $pluginName",
-            '- One-click installer: install_windows.bat',
-            '- Uninstaller: uninstall_windows.bat',
-            '- Install guide: README_INSTALL.txt'
+            '## Advanced/manual Windows install',
+            "Download ArSonKuPik-OBS-Audio-Enhancer-Windows-x64-$version.zip, extract it, then run install_windows.bat as Administrator or copy the plugin folder manually.",
+            '',
+            '## Included Windows assets',
+            '- Inno Setup installer EXE for normal users',
+            '- Manual install ZIP for advanced users',
+            '- SHA256 checksums for both packages',
+            '',
+            '## macOS and Linux',
+            'macOS and Linux packages are planned as separate platform builds. Windows is currently the first packaged release target.'
           )
           $releaseNotesLines | Set-Content -Encoding UTF8 -Path (Join-Path $dist 'RELEASE_NOTES.md')
 
-          $zipName = "$releaseName-$version.zip"
+          $zipName = "$releaseBase-$version.zip"
           $zipPath = Join-Path $PWD $zipName
           if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
           Compress-Archive -Path $bundleRoot -DestinationPath $zipPath -Force
 
-          $hash = Get-FileHash -Algorithm SHA256 $zipPath
-          "$($hash.Hash)  $zipName" | Set-Content -Encoding ASCII -Path "$zipPath.sha256"
+          $iscc = @(
+            'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
+            'C:\Program Files\Inno Setup 6\ISCC.exe'
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) { throw 'ISCC.exe was not found after installing Inno Setup.' }
+
+          $iss = Join-Path $PWD 'packaging\windows\arsonkupik-obs-audio-enhancer.iss'
+          & $iscc "/DMyAppVersion=$installerVersion" "/DMyDisplayVersion=$version" $iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup build failed with exit code ${LASTEXITCODE}." }
+
+          $exePath = Join-Path $dist "ArSonKuPik-OBS-Audio-Enhancer-Setup-$installerVersion.exe"
+          $releaseExeName = "ArSonKuPik-OBS-Audio-Enhancer-Setup-$version.exe"
+          $releaseExePath = Join-Path $PWD $releaseExeName
+          if (-not (Test-Path $exePath)) { throw "Installer EXE was not found: $exePath" }
+          if (Test-Path $releaseExePath) { Remove-Item $releaseExePath -Force }
+          Copy-Item $exePath $releaseExePath -Force
+
+          $zipHash = Get-FileHash -Algorithm SHA256 $zipPath
+          "$($zipHash.Hash)  $zipName" | Set-Content -Encoding ASCII -Path "$zipPath.sha256"
+          $exeHash = Get-FileHash -Algorithm SHA256 $releaseExePath
+          "$($exeHash.Hash)  $releaseExeName" | Set-Content -Encoding ASCII -Path "$releaseExePath.sha256"
 
           "zip_name=$zipName" >> $env:GITHUB_OUTPUT
           "zip_path=$zipPath" >> $env:GITHUB_OUTPUT
-          "sha_path=$zipPath.sha256" >> $env:GITHUB_OUTPUT
+          "zip_sha_path=$zipPath.sha256" >> $env:GITHUB_OUTPUT
+          "exe_name=$releaseExeName" >> $env:GITHUB_OUTPUT
+          "exe_path=$releaseExePath" >> $env:GITHUB_OUTPUT
+          "exe_sha_path=$releaseExePath.sha256" >> $env:GITHUB_OUTPUT
           "release_version=$version" >> $env:GITHUB_OUTPUT
 
-      - name: Upload ready-to-install OBS plugin package
+      - name: Upload Windows packages
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.bundle.outputs.zip_name }}
+          name: ArSonKuPik-Windows-Packages-${{ steps.bundle.outputs.release_version }}
           path: |
+            ${{ steps.bundle.outputs.exe_path }}
+            ${{ steps.bundle.outputs.exe_sha_path }}
             ${{ steps.bundle.outputs.zip_path }}
-            ${{ steps.bundle.outputs.sha_path }}
+            ${{ steps.bundle.outputs.zip_sha_path }}
 
       - name: Create or update GitHub Release
         if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.publish_release == 'true'
@@ -148,22 +186,24 @@ jobs:
           if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
             $manualTag = '${{ github.event.inputs.release_tag }}'
             if ([string]::IsNullOrWhiteSpace($manualTag)) {
-              throw 'Manual release requires release_tag, for example v0.2.5.'
+              throw 'Manual release requires release_tag, for example v0.3.0.'
             }
             $tag = $manualTag
           }
 
           if (-not $tag.StartsWith('v')) {
-            throw "Release tag must start with v, for example v0.2.5. Got: $tag"
+            throw "Release tag must start with v, for example v0.3.0. Got: $tag"
           }
 
+          $exePath = '${{ steps.bundle.outputs.exe_path }}'
+          $exeShaPath = '${{ steps.bundle.outputs.exe_sha_path }}'
           $zipPath = '${{ steps.bundle.outputs.zip_path }}'
-          $shaPath = '${{ steps.bundle.outputs.sha_path }}'
+          $zipShaPath = '${{ steps.bundle.outputs.zip_sha_path }}'
           $notes = Join-Path $PWD 'dist\RELEASE_NOTES.md'
 
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag $zipPath $shaPath --target '${{ github.sha }}' --title "ArSonKuPik OBS Audio Enhancer $tag" --notes-file $notes
+            gh release create $tag $exePath $exeShaPath $zipPath $zipShaPath --target '${{ github.sha }}' --title "ArSonKuPik OBS Audio Enhancer $tag" --notes-file $notes
           } else {
-            gh release upload $tag $zipPath $shaPath --clobber
+            gh release upload $tag $exePath $exeShaPath $zipPath $zipShaPath --clobber
           }
