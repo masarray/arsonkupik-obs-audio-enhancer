@@ -2,26 +2,40 @@
 
 This document is for end users who only want to install the compiled OBS plugin.
 
-## Download
+## Recommended Windows install
 
-Open the latest GitHub Release and download:
+Open the latest GitHub Release and download the installer:
 
 ```text
-ArSonKuPik-OBS-Audio-Enhancer-Windows-x64.zip
+ArSonKuPik-OBS-Audio-Enhancer-Setup-vX.Y.Z.exe
 ```
 
-## Install
+Install:
 
 1. Close OBS Studio.
-2. Extract the ZIP file.
-3. Double-click `install_windows.bat`.
-4. Approve Administrator permission.
-5. Start OBS Studio.
-6. Add the filter from:
+2. Run the `.exe` installer.
+3. Approve Administrator permission.
+4. Start OBS Studio again.
+5. Add the filter from:
 
 ```text
 Audio Source > Filters > + > ArSonKuPik Smart Enhancer
 ```
+
+## Advanced/manual Windows install
+
+Download the ZIP package:
+
+```text
+ArSonKuPik-OBS-Audio-Enhancer-Windows-x64-vX.Y.Z.zip
+```
+
+Then:
+
+1. Close OBS Studio.
+2. Extract the ZIP file.
+3. Run `install_windows.bat` as Administrator, or copy the plugin folder manually.
+4. Restart OBS Studio.
 
 ## Default setting
 
@@ -34,13 +48,13 @@ Bypass: OFF
 
 ## Uninstall
 
-Close OBS Studio and double-click:
+Use Windows Apps settings if installed with the `.exe` installer, or run:
 
 ```text
 uninstall_windows.bat
 ```
 
-## Manual install
+## Manual install path
 
 Copy the folder:
 
