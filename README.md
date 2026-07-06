@@ -10,6 +10,38 @@ Native OBS audio filter source package based on the ArSonKuPik Chrome extension 
 
 The filter is designed around the **MasAri golden reference**: soft/deep bass, pleasant stereo enhancement, silky-air treble, and ear-tickle detail. Other presets are not intended to beat MasAri; they are use-case variations that inherit part of the MasAri auditory DNA.
 
+## User download and install
+
+For normal users, use the GitHub Release ZIP:
+
+```text
+ArSonKuPik-OBS-Audio-Enhancer-Windows-x64-vX.Y.Z.zip
+```
+
+Install flow:
+
+```text
+1. Download the ZIP from Releases.
+2. Extract it.
+3. Close OBS Studio.
+4. Double-click install_windows.bat.
+5. Restart OBS Studio.
+6. Add the filter from Audio Source > Filters > + > ArSonKuPik Smart Enhancer.
+```
+
+The release bundle includes:
+
+```text
+install_windows.bat
+uninstall_windows.bat
+README_INSTALL.txt
+VERSION.txt
+arsonkupik-obs-audio-enhancer/bin/64bit/arsonkupik-obs-audio-enhancer.dll
+arsonkupik-obs-audio-enhancer/data/locale/en-US.ini
+```
+
+See `docs/USER_INSTALL.md`.
+
 ## What was ported from the extension
 
 The extension uses a browser/Web Audio chain:
@@ -91,7 +123,6 @@ C:\ProgramData\obs-studio\plugins\arsonkupik-obs-audio-enhancer\data\locale\en-U
 
 Depending on your OBS plugin-template packaging setup, you may need to adapt the final folder structure.
 
-
 ## Windows build quick start
 
 See `docs/BUILD_WINDOWS.md` for the full Windows path. Minimal commands:
@@ -130,11 +161,6 @@ The OBS wrapper is in:
 
 The native filter processes OBS float planar audio in-place through `obs_source_info.filter_audio`.
 
-## Current status
-
-This package is a complete native OBS plugin source implementation plus standalone DSP test. It was not compiled into a Windows `.dll` in this environment because the OBS/libobs development SDK is not installed here.
-
-
 ## Windows one-click local build
 
 For Mas Ari's local PC workflow, use:
@@ -163,7 +189,7 @@ To install after building:
 install_plugin_windows.bat
 ```
 
-## GitHub Actions auto build
+## GitHub Actions release build
 
 This repository includes auto-build workflows:
 
@@ -173,12 +199,14 @@ This repository includes auto-build workflows:
 ```
 
 - Push to `main` → builds DSP smoke test and Windows OBS plugin artifact.
-- Push tag `v0.2.1` or newer → creates a GitHub Release with `arsonkupik-obs-audio-enhancer-windows-x64.zip`.
+- Push tag `vX.Y.Z` → creates/updates a GitHub Release with a ready-to-install ZIP.
+- Manual workflow run can also publish a release by setting `publish_release = true` and `release_tag = vX.Y.Z`.
 
 See:
 
 ```text
 docs/GITHUB_AUTOBUILD.md
+docs/RELEASE_WORKFLOW.md
 ```
 
 ## Publish public GitHub repo from Windows
@@ -198,7 +226,6 @@ It creates a public GitHub repository and pushes this source package.
 - Stops install/package step immediately when compile/link fails.
 - `build_plugin_single_click.bat` now cleans previous build output while keeping downloaded OBS dependencies.
 - Adds `clean_build_cache.bat`.
-
 
 ## Repo hygiene / avoiding huge pushes
 
