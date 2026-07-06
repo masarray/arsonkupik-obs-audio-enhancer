@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest a feature, preset, UI improvement, or workflow improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggest improvements that keep the plugin simple, musical, and OBS-friendly.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to improve?
+      placeholder: Example: I want a smoother Smart Treble control for long listening.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should the plugin do?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Preset
+        - Smart Bass
+        - Smart Treble
+        - Vocal Body
+        - Stereo Magic
+        - Smart Protect / limiter
+        - OBS UI
+        - Installer / release package
+        - Documentation
+        - Other
+    validations:
+      required: true
