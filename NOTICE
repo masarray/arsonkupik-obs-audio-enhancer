@@ -1,0 +1,13 @@
+ArSonKuPik OBS Audio Enhancer
+Copyright 2026 Tutorial Mas Ari and ArSonKuPik contributors
+
+This product includes original source code for a native OBS Studio audio filter.
+The original ArSonKuPik DSP, preset translation layer, build scripts, documentation,
+and release packaging files are licensed under the Apache License, Version 2.0.
+
+ArSonKuPik is not affiliated with or endorsed by OBS Project.
+OBS and OBS Studio are trademarks or names used by their respective owners.
+
+The plugin is designed to be built against OBS Studio / libobs APIs.
+When distributing binaries that link to OBS Studio components, review and comply
+with the applicable OBS Studio license terms and third-party dependency notices.
