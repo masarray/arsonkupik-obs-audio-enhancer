@@ -1,65 +1,65 @@
 name: Bug report
-	description: Report an install, OBS compatibility, crash, or audio bug
-	title: "[Bug]: "
-	labels: ["bug"]
-	body:
-	  - type: markdown
-	    attributes:
-	      value: |
-	        Thanks for helping improve ArSonKuPik OBS Audio Enhancer.
-	  - type: textarea
-	    id: summary
-	    attributes:
-	      label: Summary
-	      description: What happened?
-	      placeholder: Describe the bug clearly.
-	    validations:
-	      required: true
-	  - type: textarea
-	    id: steps
-	    attributes:
-	      label: Steps to reproduce
-	      placeholder: |
-	        1. Open OBS
-	        2. Add filter
-	        3. Select preset
-	        4. Issue happens
-	    validations:
-	      required: true
-	  - type: input
-	    id: obs-version
-	    attributes:
-	      label: OBS Studio version
-	      placeholder: "32.1.2"
-	    validations:
-	      required: true
-	  - type: input
-	    id: plugin-version
-	    attributes:
-	      label: Plugin version or commit
-	      placeholder: "v0.2.6"
-	    validations:
-	      required: true
-	  - type: dropdown
-	    id: issue-type
-	    attributes:
-	      label: Issue type
-	      options:
-	        - Install / packaging
-	        - OBS cannot find plugin
-	        - Crash / freeze
-	        - Audio clipping / distortion
-	        - Phase / stereo issue
-	        - Treble harshness
-	        - Bass too boomy
-	        - Preset tuning
-	        - Build workflow
-	        - Other
-	    validations:
-	      required: true
-	  - type: textarea
-	    id: logs
-	    attributes:
-	      label: Logs or screenshots
-	      description: Add OBS logs, screenshots, or build output if available.
-	      render: text
+description: Report an install, OBS compatibility, crash, or audio bug
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve ArSonKuPik OBS Audio Enhancer.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+      placeholder: Describe the bug clearly.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open OBS
+        2. Add filter
+        3. Select preset
+        4. Issue happens
+    validations:
+      required: true
+  - type: input
+    id: obs-version
+    attributes:
+      label: OBS Studio version
+      placeholder: "32.1.2"
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version or commit
+      placeholder: "v0.2.6"
+    validations:
+      required: true
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue type
+      options:
+        - Install / packaging
+        - OBS cannot find plugin
+        - Crash / freeze
+        - Audio clipping / distortion
+        - Phase / stereo issue
+        - Treble harshness
+        - Bass too boomy
+        - Preset tuning
+        - Build workflow
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Add OBS logs, screenshots, or build output if available.
+      render: text
