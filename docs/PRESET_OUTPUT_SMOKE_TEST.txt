@@ -1,0 +1,12 @@
+MasAri input_peak_db=-12.3988 output_peak_db=-7.64676 benefit_db=4.752 meter_gr_db=3.63019 corr=0.718467 clipping=no
+Mastering Global input_peak_db=-12.3988 output_peak_db=-8.62218 benefit_db=3.77658 meter_gr_db=3.2896 corr=0.718467 clipping=no
+Max Enhancer input_peak_db=-12.3988 output_peak_db=-8.02215 benefit_db=4.37661 meter_gr_db=3.76085 corr=0.718467 clipping=no
+SonKuHoreg input_peak_db=-12.3988 output_peak_db=-6.34674 benefit_db=6.05202 meter_gr_db=4.47116 corr=0.718467 clipping=no
+SonKuBattle input_peak_db=-12.3988 output_peak_db=-6.48229 benefit_db=5.91648 meter_gr_db=5.22789 corr=0.718467 clipping=no
+SonKuBalap input_peak_db=-12.3988 output_peak_db=-6.9648 benefit_db=5.43396 meter_gr_db=4.99265 corr=0.718467 clipping=no
+Audiophile input_peak_db=-12.3988 output_peak_db=-9.06333 benefit_db=3.33544 meter_gr_db=3.18305 corr=0.718467 clipping=no
+Punchy Music input_peak_db=-12.3988 output_peak_db=-7.70515 benefit_db=4.69362 meter_gr_db=3.95827 corr=0.718467 clipping=no
+Open Air input_peak_db=-12.3988 output_peak_db=-8.375 benefit_db=4.02377 meter_gr_db=5.02569 corr=0.718467 clipping=no
+Movie Sub input_peak_db=-12.3988 output_peak_db=-8.9125 benefit_db=3.48627 meter_gr_db=3.39535 corr=0.718467 clipping=no
+Podcast input_peak_db=-12.3988 output_peak_db=-10.723 benefit_db=1.67579 meter_gr_db=4.11909 corr=0.718467 clipping=no
+Night Listening input_peak_db=-12.3988 output_peak_db=-10.6922 benefit_db=1.70659 meter_gr_db=5.19713 corr=0.718467 clipping=no

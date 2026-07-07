@@ -1,8 +1,0 @@
-blank_issues_enabled: true
-contact_links:
-  - name: User install guide
-    url: https://github.com/masarray/arsonkupik-obs-audio-enhancer/blob/main/docs/USER_INSTALL.md
-    about: Read the install guide before reporting install problems.
-  - name: Build troubleshooting
-    url: https://github.com/masarray/arsonkupik-obs-audio-enhancer/blob/main/docs/BUILD_TROUBLESHOOTING.md
-    about: Common Windows build fixes and one-click build troubleshooting.

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-build:
+    name: Windows build smoke
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Visual Studio environment
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vsInstall = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsInstall) { throw 'Visual Studio C++ toolchain was not found.' }
+          $vsDevCmd = Join-Path $vsInstall 'Common7\Tools\VsDevCmd.bat'
+          $script = Join-Path $PWD 'scripts\build-windows-from-obs-release.ps1'
+          cmd /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 && powershell -NoProfile -ExecutionPolicy Bypass -File `"$script`" -OBSVersion latest"
+      - name: Upload Windows package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-package-programdata
+          path: package-programdata
+
+  dsp-smoke-test:
+    name: DSP smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build-test -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
+      - name: Build
+        run: cmake --build build-test --config Release
+      - name: Run smoke test
+        run: ./build-test/arsonkupik_dsp_smoke

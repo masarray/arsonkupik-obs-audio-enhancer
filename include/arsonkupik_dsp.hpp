@@ -44,7 +44,7 @@ struct CompressorConfig {
     double attack_sec = 0.032;
     double release_sec = 0.21;
     double makeup_gain_db = 0.88;
-    double parallel_mix = 92.0;
+    double parallel_mix = 92.0; // percent
 };
 
 struct ColorConfig {
@@ -222,6 +222,7 @@ private:
 
     std::vector<std::array<Biquad, kMaxChannels>> eq_filters_;
 
+    // Color / psychoacoustic filters. Stereo paths use indexes 0=L, 1=R.
     std::array<Biquad,2> bass_pre_;
     std::array<Biquad,2> bass_post_hp_;
     std::array<Biquad,2> bass_post_lp_;
@@ -237,6 +238,7 @@ private:
     Biquad treble_skin_bp_;
     Biquad low_body_bp_;
 
+    // Generated phase-safe width from mid copy.
     Biquad width_pre_hp_;
     Biquad width_lowmid_hp_;
     Biquad width_lowmid_lp_;
@@ -245,11 +247,39 @@ private:
     Biquad width_high_hp_;
     Biquad width_air_tone_;
 
+    // Smart Multiband M/S Imager v2: real-side analysis/enhancement.
+    // These filters process the existing Side signal, so musical stereo
+    // instruments are preserved while risky low anti-phase energy is reduced.
+    Biquad width_side_sub_hp_;
+    Biquad width_side_sub_lp_;
+    Biquad width_side_body_hp_;
+    Biquad width_side_body_lp_;
+    Biquad width_side_mid_hp_;
+    Biquad width_side_mid_lp_;
+    Biquad width_side_high_hp_;
+    Biquad width_side_high_lp_;
+    Biquad width_side_air_hp_;
+    Biquad width_side_air_tone_;
+
     DynamicsProcessor compressor_;
     LimiterProcessor limiter_;
 
     OnePoleSmoother bypass_smooth_;
     OnePoleSmoother meter_smooth_;
+
+    // Slow detectors used by Smart Stereo Integrity Engine.
+    double width_mid_env_ = 1.0e-6;
+    double width_side_env_ = 1.0e-6;
+    double width_side_fast_env_ = 1.0e-6;
+    double width_side_slow_env_ = 1.0e-6;
+    double width_corr_env_ = 1.0;
+
+    // Extension-style smart gain staging: reserve headroom only when source is
+    // hot, then restore perceived loudness with clean makeup before the limiter.
+    double smart_input_peak_env_ = 1.0e-6;
+    double smart_prelim_peak_env_ = 1.0e-6;
+    double smart_headroom_db_ = 0.0;
+    double smart_makeup_db_ = 0.0;
 };
 
 } // namespace arsonkupik

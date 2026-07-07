@@ -1,65 +1,109 @@
+; ArSonKuPik OBS Audio Enhancer installer
+#define MyAppName "ArSonKuPik OBS Audio Enhancer"
 #ifndef MyAppVersion
-#define MyAppVersion "dev"
+  #define MyAppVersion "0.0.0"
+#endif
+#ifndef SourcePackageDir
+  #define SourcePackageDir "."
 #endif
 
-#define MyAppName "ArSonKuPik OBS Audio Enhancer"
-#define MyAppPublisher "Tutorial Mas Ari / ArSonKuPik Contributors"
-#define MyAppURL "https://github.com/masarray/arsonkupik-obs-audio-enhancer"
-#define MyPluginName "arsonkupik-obs-audio-enhancer"
-#define MyPluginDll "arsonkupik-obs-audio-enhancer.dll"
-
 [Setup]
-AppId={{5DDFD208-1C3A-4307-B5AE-0E9BE64CE3BE}
+AppId={{9A160E60-EC40-4F23-AE49-7B64F51470FD}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppPublisher={#MyAppPublisher}
-AppPublisherURL={#MyAppURL}
-AppSupportURL={#MyAppURL}/issues
-AppUpdatesURL={#MyAppURL}/releases
-DefaultDirName={commonappdata}\obs-studio\plugins\{#MyPluginName}
-DefaultGroupName={#MyAppName}
+AppPublisher=masarray
+DefaultDirName={code:GetDefaultPluginDir}
+AppendDefaultDirName=no
 DisableDirPage=yes
+DirExistsWarning=no
 DisableProgramGroupPage=yes
-OutputDir=..\..\dist
-OutputBaseFilename=ArSonKuPik-OBS-Audio-Enhancer-Setup-{#MyAppVersion}
-Compression=lzma2
+OutputDir=output
+OutputBaseFilename=ArSonKuPik-OBS-Audio-Enhancer-Setup-v{#MyAppVersion}
+Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-ArchitecturesInstallIn64BitMode=x64
 PrivilegesRequired=admin
-UninstallDisplayName={#MyAppName}
-VersionInfoVersion={#MyAppVersion}
-VersionInfoCompany={#MyAppPublisher}
-VersionInfoDescription=Native OBS Studio smart audio enhancer filter
-VersionInfoProductName={#MyAppName}
+ArchitecturesInstallIn64BitMode=x64compatible
 SetupLogging=yes
 CloseApplications=yes
-CloseApplicationsFilter=obs64.exe
+CloseApplicationsFilter=obs64.exe,obs32.exe
+RestartApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
-[Files]
-Source: "..\..\package-programdata\{#MyPluginName}\bin\64bit\{#MyPluginDll}"; DestDir: "{commonappdata}\obs-studio\plugins\{#MyPluginName}\bin\64bit"; Flags: ignoreversion
-Source: "..\..\package-programdata\{#MyPluginName}\data\locale\en-US.ini"; DestDir: "{commonappdata}\obs-studio\plugins\{#MyPluginName}\data\locale"; Flags: ignoreversion
-Source: "..\..\release\README_INSTALL.txt"; DestDir: "{commonappdata}\obs-studio\plugins\{#MyPluginName}"; Flags: ignoreversion isreadme
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\bin"
+Type: filesandordirs; Name: "{app}\data"
 
-[Icons]
-Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
+[Files]
+Source: "{#SourcePackageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Run]
-Filename: "notepad.exe"; Parameters: "{commonappdata}\obs-studio\plugins\{#MyPluginName}\README_INSTALL.txt"; Description: "Open install notes"; Flags: postinstall skipifsilent nowait
+Filename: "https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases"; Description: "View release notes"; Flags: postinstall shellexec skipifsilent unchecked
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{commonappdata}\obs-studio\plugins\{#MyPluginName}"
+Type: filesandordirs; Name: "{app}"
 
 [Code]
+function IsObsBinaryHere(Path: String): Boolean;
+begin
+  Result := FileExists(AddBackslash(Path) + 'bin\64bit\obs64.exe') or FileExists(AddBackslash(Path) + 'bin\64-bit\obs64.exe') or FileExists(AddBackslash(Path) + 'bin\obs64.exe');
+end;
+
+function FindObsInstallDir(): String;
+var
+  InstallDir: String;
+begin
+  Result := '';
+
+  if RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\OBS Studio_is1', 'InstallLocation', InstallDir) then
+  begin
+    if DirExists(InstallDir) then
+    begin
+      Result := InstallDir;
+      exit;
+    end;
+  end;
+
+  if RegQueryStringValue(HKCU, 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\OBS Studio_is1', 'InstallLocation', InstallDir) then
+  begin
+    if DirExists(InstallDir) then
+    begin
+      Result := InstallDir;
+      exit;
+    end;
+  end;
+
+  InstallDir := ExpandConstant('{pf}\obs-studio');
+  if IsObsBinaryHere(InstallDir) then
+  begin
+    Result := InstallDir;
+    exit;
+  end;
+
+  InstallDir := ExpandConstant('{pf32}\obs-studio');
+  if IsObsBinaryHere(InstallDir) then
+  begin
+    Result := InstallDir;
+    exit;
+  end;
+end;
+
+function GetDefaultPluginDir(Default: String): String;
+begin
+  Result := ExpandConstant('{commonappdata}\obs-studio\plugins\arsonkupik-obs-audio-enhancer');
+end;
+
 function InitializeSetup(): Boolean;
+var
+  ObsDir: String;
 begin
   Result := True;
-  if MsgBox('Please close OBS Studio before installing ArSonKuPik OBS Audio Enhancer.' #13#10 #13#10 +
-            'Continue installation?', mbConfirmation, MB_YESNO) = IDNO then
+  ObsDir := FindObsInstallDir();
+
+  if ObsDir = '' then
   begin
-    Result := False;
+    MsgBox('OBS Studio was not detected in the usual locations. The installer will still install the plugin into the standard OBS ProgramData plugin folder:' + #13#10 + #13#10 + ExpandConstant('{commonappdata}\obs-studio\plugins\arsonkupik-obs-audio-enhancer') + #13#10 + #13#10 + 'Install OBS Studio first if you have not installed it yet.', mbInformation, MB_OK);
   end;
 end;

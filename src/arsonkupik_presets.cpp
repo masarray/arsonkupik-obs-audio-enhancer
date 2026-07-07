@@ -40,12 +40,12 @@ ColorConfig masari_color()
 {
     ColorConfig c;
     c.enabled = true;
-    c.drive = 3.12;
+    c.drive = 1.36;
     c.body_freq = 166;
     c.body = 12.8;
     c.smart_bass = 55;
     c.warmth_freq = 500;
-    c.harmonics = 34;
+    c.harmonics = 8;
     c.harmonics_freq = 2180;
     c.warmth = 12.8;
     c.air_freq = 12650;
@@ -69,7 +69,7 @@ WidthConfig masari_width()
 
 OutputConfig masari_output()
 {
-    return {0.0, -0.55, true, -1.05, 0.76, true, false};
+    return {0.0, 0.35, true, -0.90, 0.82, true, false};
 }
 
 Preset base(const char* id, const char* name, const char* description)
@@ -83,7 +83,7 @@ Preset base(const char* id, const char* name, const char* description)
     p.color = masari_color();
     p.width = masari_width();
     p.output = masari_output();
-    p.macro = {100, 65, 55, 70, 65, 85, true};
+    p.macro = {100, 78, 68, 80, 76, 88, true};
     return p;
 }
 
@@ -109,9 +109,9 @@ std::vector<Preset> make_presets()
             b("master-air", EqType::HighShelf, 12650, 2.86, 0.42)
         };
         p.compressor = {true, -24.2, 1.62, 26, 0.036, 0.225, 0.64, 91};
-        p.color = {true, 3.05, 166, 14.2, 58, 500, 12.7, 2080, 31, 12650, 34.4, 50, 72, 70.5, 50, 48, 56, 26.2, 48, "mastering"};
+        p.color = {true, 1.32, 166, 14.2, 58, 500, 12.7, 2080, 7, 12650, 34.4, 50, 72, 70.5, 50, 48, 56, 26.2, 48, "mastering"};
         p.width = {true, 64, 134, 100, 102, 114, 180, 74, true, 150, 3.05};
-        p.output = {0, -1.7, true, -1.05, 0.36, true, false};
+        p.output = {0, 0.70, true, -0.90, 0.50, true, false};
         p.macro = {75, 58, 58, 55, 56, 62, true};
         presets.push_back(p);
     }
@@ -128,9 +128,9 @@ std::vector<Preset> make_presets()
             b("vocal-body-490", EqType::Bell, 490, 1.50, 0.80)
         };
         p.compressor = {true, -24.2, 1.8, 24, 0.032, 0.19, 0.82, 90};
-        p.color = {true, 3.42, 164, 15.8, 64, 505, 14.0, 2100, 31, 12750, 31.0, 62, 80, 68.0, 47, 52, 66, 29, 64, "mastering"};
+        p.color = {true, 1.48, 164, 15.8, 64, 505, 14.0, 2100, 8, 12750, 31.0, 62, 80, 68.0, 47, 52, 66, 29, 64, "mastering"};
         p.width = {true, 66, 137, 100, 102, 115, 184, 72, true, 158, 3.10};
-        p.output = {0, -1.9, true, -1.05, 0.54, true, false};
+        p.output = {0, 0.80, true, -0.90, 0.68, true, false};
         p.macro = {70, 74, 64, 62, 64, 70, true};
         presets.push_back(p);
     }
@@ -152,9 +152,9 @@ std::vector<Preset> make_presets()
             b("horeg-air", EqType::HighShelf, 13000, 2.18, 0.50)
         };
         p.compressor = {true, -24.8, 1.75, 24, 0.038, 0.24, 0.72, 89};
-        p.color = {true, 3.95, 145, 20.6, 94, 500, 17.2, 2050, 40, 12650, 20.8, 78, 94, 64.5, 54, 63, 76, 32, 78, "mastering"};
+        p.color = {true, 1.55, 145, 20.6, 94, 500, 17.2, 2050, 10, 12650, 20.8, 78, 94, 64.5, 54, 63, 76, 32, 78, "mastering"};
         p.width = {true, 64, 126, 100, 101, 113, 148, 92, true, 170, 1.62};
-        p.output = {0, -2.0, true, -1.25, 0.66, true, false};
+        p.output = {0, 0.90, true, -1.00, 0.76, true, false};
         p.macro = {60, 82, 90, 48, 68, 48, true};
         presets.push_back(p);
     }
@@ -178,9 +178,9 @@ std::vector<Preset> make_presets()
             b("battle-air", EqType::HighShelf, 12650, 1.92, 0.50)
         };
         p.compressor = {true, -25.1, 1.92, 24, 0.030, 0.17, 0.62, 88};
-        p.color = {true, 3.92, 150, 21.4, 94, 505, 15.0, 2250, 44, 12550, 20.2, 79, 94, 66.0, 52, 70, 80, 32, 82, "mastering"};
+        p.color = {true, 1.55, 150, 21.4, 94, 505, 15.0, 2250, 10, 12550, 20.2, 79, 94, 66.0, 52, 70, 80, 32, 82, "mastering"};
         p.width = {true, 65, 126, 100, 101, 114, 148, 92, true, 178, 1.66};
-        p.output = {0, -2.2, true, -1.25, 0.68, true, false};
+        p.output = {0, 0.95, true, -1.00, 0.80, true, false};
         p.macro = {45, 88, 92, 52, 76, 38, true};
         presets.push_back(p);
     }
@@ -205,9 +205,9 @@ std::vector<Preset> make_presets()
             b("balap-air", EqType::HighShelf, 12750, 1.72, 0.50)
         };
         p.compressor = {true, -25.0, 1.88, 25, 0.026, 0.16, 0.56, 88};
-        p.color = {true, 3.82, 152, 19.8, 90, 505, 14.2, 2300, 46, 12600, 19.8, 80, 94, 61.5, 53, 72, 82, 30, 84, "mastering"};
+        p.color = {true, 1.50, 152, 19.8, 90, 505, 14.2, 2300, 10, 12600, 19.8, 80, 94, 61.5, 53, 72, 82, 30, 84, "mastering"};
         p.width = {true, 65, 127, 100, 100, 116, 150, 92, true, 185, 1.72};
-        p.output = {0, -2.25, true, -1.25, 0.64, true, false};
+        p.output = {0, 0.95, true, -1.00, 0.78, true, false};
         p.macro = {42, 88, 88, 50, 78, 40, true};
         presets.push_back(p);
     }
@@ -224,9 +224,9 @@ std::vector<Preset> make_presets()
             b("vocal-body-490", EqType::Bell, 490, 1.50, 0.80)
         };
         p.compressor = {true, -24, 1.65, 22, 0.032, 0.22, 0.55, 90};
-        p.color = {true, 2.80, 170, 12.8, 54, 500, 10.8, 2050, 27, 12680, 28.4, 53, 77, 63.0, 40, 42, 52, 24, 37, "mastering"};
+        p.color = {true, 1.18, 170, 12.8, 54, 500, 10.8, 2050, 6, 12680, 28.4, 53, 77, 63.0, 40, 42, 52, 24, 37, "mastering"};
         p.width = {true, 67, 140, 100, 102, 116, 186, 70, true, 148, 3.18};
-        p.output = {0, -2.1, true, -1.0, 0.28, true, false};
+        p.output = {0, 0.70, true, -0.90, 0.44, true, false};
         p.macro = {55, 48, 48, 58, 52, 58, true};
         presets.push_back(p);
     }
@@ -244,9 +244,9 @@ std::vector<Preset> make_presets()
             b("vocal-body-490", EqType::Bell, 490, 1.50, 0.80)
         };
         p.compressor = {true, -23.8, 1.95, 18, 0.026, 0.18, 0.68, 91};
-        p.color = {true, 4.05, 165, 20.2, 78, 505, 16.2, 2180, 38, 12700, 30.0, 59, 80, 72.0, 52, 56, 68, 34, 70, "mastering"};
+        p.color = {true, 1.55, 165, 20.2, 78, 505, 16.2, 2180, 9, 12700, 30.0, 59, 80, 72.0, 52, 56, 68, 34, 70, "mastering"};
         p.width = {true, 68, 142, 100, 103, 118, 188, 70, true, 150, 3.28};
-        p.output = {0, -2.5, true, -1.0, 0.58, true, false};
+        p.output = {0, 0.90, true, -0.90, 0.72, true, false};
         p.macro = {68, 75, 74, 62, 66, 72, true};
         presets.push_back(p);
     }
@@ -263,9 +263,9 @@ std::vector<Preset> make_presets()
             b("vocal-body-490", EqType::Bell, 490, 1.50, 0.80)
         };
         p.compressor = {true, -25.2, 2.05, 20, 0.028, 0.22, 0.45, 88};
-        p.color = {true, 3.72, 180, 18.6, 68, 510, 13.7, 2100, 32, 12950, 17.6, 71, 93, 55.8, 41, 49, 60, 31, 46, "mastering"};
+        p.color = {true, 1.42, 180, 18.6, 68, 510, 13.7, 2100, 8, 12950, 17.6, 71, 93, 55.8, 41, 49, 60, 31, 46, "mastering"};
         p.width = {true, 56, 117, 100, 101, 105, 135, 98, true, 190, 1.12};
-        p.output = {0, -3.1, true, -1.2, 0.52, true, false};
+        p.output = {0, 0.85, true, -1.00, 0.66, true, false};
         p.macro = {48, 70, 72, 42, 58, 38, true};
         presets.push_back(p);
     }
@@ -284,9 +284,9 @@ std::vector<Preset> make_presets()
             b("vocal-body-490", EqType::Bell, 490, 1.50, 0.80)
         };
         p.compressor = {true, -24, 1.7, 18, 0.034, 0.28, 0.35, 90};
-        p.color = {true, 2.90, 180, 14.0, 58, 520, 12.6, 1850, 21, 12350, 12.8, 68, 94, 36.5, 25, 30, 36, 24, 15, "warm"};
+        p.color = {true, 1.12, 180, 14.0, 58, 520, 12.6, 1850, 5, 12350, 12.8, 68, 94, 36.5, 25, 30, 36, 24, 15, "warm"};
         p.width = {true, 50, 114, 100, 101, 103, 127, 98, true, 165, 0.82};
-        p.output = {0, -2.4, true, -1.1, 0.22, true, false};
+        p.output = {0, 0.70, true, -0.95, 0.42, true, false};
         p.macro = {35, 52, 62, 36, 42, 35, true};
         presets.push_back(p);
     }
@@ -294,21 +294,21 @@ std::vector<Preset> make_presets()
     {
         auto p = base("podcast", "Podcast", "Voice-safe polish: controlled lows, smooth compression, soft air, no crackle.");
         p.eq = {
-            b("podcast-cut", EqType::LowCut, 86, 0, 0.70710678, 24),
+            b("podcast-cut", EqType::LowCut, 58, 0, 0.70710678, 24),
             b("podcast-low", EqType::LowShelf, 118, 0.10, 0.64),
-            b("vocal-chest", EqType::Bell, 190, 0.52, 0.72),
+            b("vocal-chest", EqType::Bell, 180, 1.22, 0.72),
             b("podcast-clean", EqType::Bell, 330, -2.10, 1.00),
-            b("podcast-presence", EqType::Bell, 1850, 0.98, 0.76),
-            b("podcast-detail", EqType::Bell, 3600, 0.55, 0.82),
+            b("podcast-presence", EqType::Bell, 2050, 1.45, 0.72),
+            b("podcast-detail", EqType::Bell, 4200, 0.88, 0.78),
             b("sibilance-soften", EqType::Bell, 6900, -1.80, 1.80),
-            b("podcast-air", EqType::HighShelf, 11200, 0.90, 0.38),
+            b("podcast-air", EqType::HighShelf, 12200, 2.25, 0.42),
             b("vocal-body-490", EqType::Bell, 490, 1.50, 0.80)
         };
-        p.compressor = {true, -26.5, 2.0, 24, 0.018, 0.26, 0.45, 80};
-        p.color = {true, 0.90, 165, 5.8, 34, 520, 8.4, 1750, 6, 10800, 4.2, 64, 88, 22.5, 29, 34, 40, 9, 0, "clean"};
+        p.compressor = {true, -25.5, 1.85, 24, 0.018, 0.24, 1.25, 84};
+        p.color = {true, 0.95, 168, 9.5, 38, 510, 11.5, 2050, 4, 12200, 20.0, 66, 94, 48.0, 42, 64, 72, 22, 0, "clean"};
         p.width = {false, 0, 100, 100, 100, 100, 108, 100, true, 145, 0};
-        p.output = {0, -2.9, true, -1.3, 0.06, true, false};
-        p.macro = {15, 25, 30, 25, 66, 0, true};
+        p.output = {0, 0.85, true, -0.95, 0.30, true, false};
+        p.macro = {30, 42, 38, 52, 82, 0, true};
         presets.push_back(p);
     }
 
@@ -323,11 +323,11 @@ std::vector<Preset> make_presets()
             b("night-air", EqType::HighShelf, 7800, -2.25, 0.38),
             b("vocal-body-490", EqType::Bell, 490, 0.85, 0.80)
         };
-        p.compressor = {true, -33, 2.65, 24, 0.026, 0.42, 1.0, 72};
-        p.color = {true, 0.78, 155, 3.0, 42, 470, 9.8, 1500, 4, 9200, -5.6, 72, 90, 10, 6, 9, 14, 10, 0, "warm"};
+        p.compressor = {true, -28.5, 1.85, 24, 0.028, 0.36, 1.25, 76};
+        p.color = {true, 0.75, 158, 5.8, 44, 470, 10.8, 1550, 2, 9800, 5.5, 72, 90, 18, 10, 14, 22, 14, 0, "warm"};
         p.width = {false, 0, 96, 100, 96, 92, 98, 100, true, 120, -1.4};
-        p.output = {0, -5.2, true, -1.5, 0.05, true, false};
-        p.macro = {20, 18, 34, 18, 32, 0, true};
+        p.output = {0, 0.65, true, -1.05, 0.22, true, false};
+        p.macro = {25, 28, 42, 26, 38, 0, true};
         presets.push_back(p);
     }
 

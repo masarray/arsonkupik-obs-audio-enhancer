@@ -1,5 +1,10 @@
-preset=MasAri
-input_peak_db=-24.2728
-output_peak_db=-20.594
-gain_reduction_db=3.59948
-correlation=0.738099
+ArSonKuPik v0.4.3 Extension Smart Makeup Benefit
+
+Linux DSP smoke test: PASS
+Build command:
+  cmake -S . -B build -DBUILD_OBS_PLUGIN=OFF
+  cmake --build build -j2
+  ./build/arsonkupik_dsp_smoke
+
+All presets produced an output peak higher than the raw test signal and no clipping was reported.
+Manual macro tuning checkbox was removed; sliders are always live.

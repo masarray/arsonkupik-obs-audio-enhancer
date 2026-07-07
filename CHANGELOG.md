@@ -1,28 +1,25 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project are documented here.
 
-The project follows practical semantic-style release tags such as `v0.2.6`.
+## [0.4.4] - 2026-07-07
+### Changed
+- Cleaned public repository helper scripts.
+- Kept only the Windows batch files that are actually useful for normal local use:
+  - `build_plugin_single_click.bat`
+  - `install_plugin_windows.bat`
+  - `scripts/find-cmake.bat` because the build helper uses it internally
+- Improved Windows installer logic so the standard OBS plugin folder can already exist without producing a confusing warning.
+- Installer now detects a typical OBS installation and installs into the standard ProgramData plugin path.
+- Confirmed project licensing as GPL-3.0.
 
-## Unreleased
+## [0.4.3] - 2026-07-07
+### Added
+- Public release automation for Windows installer, Windows ZIP, and Linux package artifacts.
+- GitHub Pages landing site and README assets.
+- Public, user-facing release notes.
 
-- Public professional README rewrite for OBS audio enhancer discovery.
-- Apache License 2.0 project licensing and NOTICE file.
-- User-friendly support, security, contributing, and conduct files.
-- SEO and repository discovery documentation.
-
-## v0.2.x
-
-- Added GitHub Actions build and release workflow.
-- Added ready-to-install Windows x64 release bundle.
-- Added `install_windows.bat` and `uninstall_windows.bat` for end users.
-- Fixed Windows one-click build compatibility issues.
-- Added build cache cleanup and repo hygiene scripts.
-
-## v0.1.x
-
-- Initial native OBS audio filter source package.
-- Added ArSonKuPik DSP core.
-- Added MasAri reference preset and factory preset set.
-- Added standalone DSP smoke test.
-- Added OBS filter wrapper.
+### Changed
+- Repository cleaned up for public presentation.
+- README rewritten for public users and contributors.
+- Project license updated to GPL-3.0.

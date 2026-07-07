@@ -42,17 +42,13 @@ size_t current_channel_count()
 const arsonkupik::Preset& preset_from_settings(obs_data_t* settings)
 {
     const char* preset = obs_data_get_string(settings, "preset");
-    const arsonkupik::Preset* p = arsonkupik::find_preset(preset && *preset ? preset : "default");
+    const arsonkupik::Preset* p = preset && *preset ? arsonkupik::find_preset(preset) : nullptr;
     return p ? *p : arsonkupik::default_preset();
 }
 
 void sync_settings_to_preset(obs_data_t* settings)
 {
     const auto& p = preset_from_settings(settings);
-
-    // Keep the visible OBS sliders aligned with the selected factory preset.
-    // These are macro values for the user; the real DSP recipe remains the
-    // hidden canonical preset in arsonkupik_presets.cpp.
     obs_data_set_double(settings, "enhance", p.macro.enhance);
     obs_data_set_double(settings, "smart_bass", p.macro.smart_bass);
     obs_data_set_double(settings, "smart_treble", p.macro.smart_treble);
@@ -64,20 +60,7 @@ void sync_settings_to_preset(obs_data_t* settings)
 
 bool preset_modified(obs_properties_t*, obs_property_t*, obs_data_t* settings)
 {
-    // When the user chooses a preset, show that preset's macro values in the UI.
-    // This avoids the confusing old behavior where every preset visually looked
-    // like MasAri even though the DSP recipe had changed.
     sync_settings_to_preset(settings);
-    return true;
-}
-
-bool manual_tuning_modified(obs_properties_t*, obs_property_t*, obs_data_t* settings)
-{
-    // Returning from manual override to preset mode should restore the selected
-    // preset's frozen macro values instead of leaving stale manual numbers.
-    if (!obs_data_get_bool(settings, "manual_tuning")) {
-        sync_settings_to_preset(settings);
-    }
     return true;
 }
 
@@ -86,32 +69,23 @@ void read_settings(FilterData* f, obs_data_t* settings)
     RuntimeParams p;
     const char* preset = obs_data_get_string(settings, "preset");
     p.preset_id = preset && *preset ? preset : "default";
-    p.advanced_override = obs_data_get_bool(settings, "manual_tuning");
-
     const arsonkupik::Preset* preset_cfg = arsonkupik::find_preset(p.preset_id);
     if (!preset_cfg) preset_cfg = &arsonkupik::default_preset();
 
-    if (p.advanced_override) {
-        p.enhance = obs_data_get_double(settings, "enhance");
-        p.smart_bass = obs_data_get_double(settings, "smart_bass");
-        p.smart_treble = obs_data_get_double(settings, "smart_treble");
-        p.vocal_body = obs_data_get_double(settings, "vocal_body");
-        p.stereo_magic = obs_data_get_double(settings, "stereo_magic");
-        p.output_trim_db = obs_data_get_double(settings, "output_trim_db");
-        p.smart_protect = obs_data_get_bool(settings, "smart_protect");
-    } else {
-        // Preset mode must be a true frozen factory recipe. Do not let stale UI
-        // sliders affect the sound when Manual macro tuning is off.
-        p.enhance = preset_cfg->macro.enhance;
-        p.smart_bass = preset_cfg->macro.smart_bass;
-        p.smart_treble = preset_cfg->macro.smart_treble;
-        p.vocal_body = preset_cfg->macro.vocal_body;
-        p.stereo_magic = preset_cfg->macro.stereo_magic;
-        p.output_trim_db = preset_cfg->output.output_gain_db;
-        p.smart_protect = preset_cfg->macro.smart_protect;
-    }
-
     p.bypass = obs_data_get_bool(settings, "bypass");
+
+    // v0.4.3 UX: sliders are always live. Preset selection loads a recipe into
+    // the sliders, then every slider edit immediately becomes the active macro.
+    // The old "Manual macro tuning" checkbox was confusing and made the UI
+    // look editable while the DSP could still ignore the slider values.
+    p.advanced_override = true;
+    p.enhance = obs_data_get_double(settings, "enhance");
+    p.smart_bass = obs_data_get_double(settings, "smart_bass");
+    p.smart_treble = obs_data_get_double(settings, "smart_treble");
+    p.vocal_body = obs_data_get_double(settings, "vocal_body");
+    p.stereo_magic = obs_data_get_double(settings, "stereo_magic");
+    p.output_trim_db = obs_data_get_double(settings, "output_trim_db");
+    p.smart_protect = obs_data_get_bool(settings, "smart_protect");
     f->params = p;
 }
 
@@ -149,13 +123,12 @@ void update(void* data, obs_data_t* settings)
 void get_defaults(obs_data_t* settings)
 {
     obs_data_set_default_string(settings, "preset", "default");
-    obs_data_set_default_bool(settings, "manual_tuning", false);
-    obs_data_set_default_double(settings, "enhance", 65.0);
-    obs_data_set_default_double(settings, "smart_bass", 55.0);
-    obs_data_set_default_double(settings, "smart_treble", 70.0);
-    obs_data_set_default_double(settings, "vocal_body", 65.0);
-    obs_data_set_default_double(settings, "stereo_magic", 85.0);
-    obs_data_set_default_double(settings, "output_trim_db", -0.55);
+    obs_data_set_default_double(settings, "enhance", 78.0);
+    obs_data_set_default_double(settings, "smart_bass", 68.0);
+    obs_data_set_default_double(settings, "smart_treble", 80.0);
+    obs_data_set_default_double(settings, "vocal_body", 76.0);
+    obs_data_set_default_double(settings, "stereo_magic", 88.0);
+    obs_data_set_default_double(settings, "output_trim_db", 0.75);
     obs_data_set_default_bool(settings, "smart_protect", true);
     obs_data_set_default_bool(settings, "bypass", false);
 }
@@ -175,15 +148,12 @@ obs_properties_t* get_properties(void*)
     obs_properties_add_bool(props, "bypass", obs_module_text("Bypass"));
     obs_properties_add_bool(props, "smart_protect", obs_module_text("SmartProtect"));
 
-    obs_property_t* manual = obs_properties_add_bool(props, "manual_tuning", obs_module_text("ManualTuning"));
-    obs_property_set_modified_callback(manual, manual_tuning_modified);
-
     obs_properties_add_float_slider(props, "enhance", obs_module_text("Enhance"), 0.0, 100.0, 1.0);
     obs_properties_add_float_slider(props, "smart_bass", obs_module_text("SmartBass"), 0.0, 100.0, 1.0);
     obs_properties_add_float_slider(props, "smart_treble", obs_module_text("SmartTreble"), 0.0, 100.0, 1.0);
     obs_properties_add_float_slider(props, "vocal_body", obs_module_text("VocalBody"), 0.0, 100.0, 1.0);
     obs_properties_add_float_slider(props, "stereo_magic", obs_module_text("StereoMagic"), 0.0, 100.0, 1.0);
-    obs_properties_add_float_slider(props, "output_trim_db", obs_module_text("OutputTrim"), -12.0, 6.0, 0.1);
+    obs_properties_add_float_slider(props, "output_trim_db", obs_module_text("OutputTrim"), -6.0, 6.0, 0.1);
 
     obs_properties_add_text(props, "note", obs_module_text("Note"), OBS_TEXT_INFO);
     return props;

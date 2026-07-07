@@ -2,7 +2,20 @@
 
 #include <cmath>
 #include <iostream>
+#include <string>
 #include <vector>
+
+namespace {
+double peak_db(const std::vector<float>& l, const std::vector<float>& r)
+{
+    double p = 0.0;
+    for (std::size_t i = 0; i < l.size(); ++i) {
+        p = std::max(p, std::abs(static_cast<double>(l[i])));
+        p = std::max(p, std::abs(static_cast<double>(r[i])));
+    }
+    return arsonkupik::gain_to_db(p + 1.0e-12);
+}
+}
 
 int main()
 {
@@ -10,39 +23,56 @@ int main()
     constexpr double sr = 48000.0;
     constexpr double kPi = 3.141592653589793238462643383279502884;
     constexpr std::size_t frames = 48000;
-    std::vector<float> left(frames), right(frames);
+    std::vector<float> source_left(frames), source_right(frames);
     for (std::size_t i = 0; i < frames; ++i) {
-        double t = static_cast<double>(i) / sr;
-        left[i] = static_cast<float>(0.11 * std::sin(2.0 * kPi * 60.0 * t)
-                                  + 0.08 * std::sin(2.0 * kPi * 880.0 * t)
-                                  + 0.04 * std::sin(2.0 * kPi * 6500.0 * t));
-        right[i] = static_cast<float>(0.10 * std::sin(2.0 * kPi * 61.0 * t + 0.20)
-                                   + 0.07 * std::sin(2.0 * kPi * 880.0 * t - 0.15)
-                                   + 0.035 * std::sin(2.0 * kPi * 7000.0 * t));
+        const double t = static_cast<double>(i) / sr;
+        // Mixed stereo material: bass + centered vocal-ish tone + stereo air/detail.
+        source_left[i] = static_cast<float>(0.11 * std::sin(2.0 * kPi * 60.0 * t)
+                                      + 0.08 * std::sin(2.0 * kPi * 880.0 * t)
+                                      + 0.04 * std::sin(2.0 * kPi * 6500.0 * t)
+                                      + 0.018 * std::sin(2.0 * kPi * 2600.0 * t));
+        source_right[i] = static_cast<float>(0.10 * std::sin(2.0 * kPi * 61.0 * t + 0.20)
+                                       + 0.07 * std::sin(2.0 * kPi * 880.0 * t - 0.15)
+                                       + 0.035 * std::sin(2.0 * kPi * 7000.0 * t)
+                                       + 0.018 * std::sin(2.0 * kPi * 2600.0 * t));
     }
-    float* planes[2] = { left.data(), right.data() };
-    RuntimeParams params;
-    params.preset_id = "default";
-    params.enhance = 65;
-    params.smart_bass = 55;
-    params.smart_treble = 70;
-    params.vocal_body = 65;
-    params.stereo_magic = 85;
-    params.output_trim_db = -1.0;
-    params.smart_protect = true;
-    params.bypass = false;
+    const double input_peak = peak_db(source_left, source_right);
+    bool failed = false;
+    for (const auto& preset : factory_presets()) {
+        std::vector<float> left = source_left;
+        std::vector<float> right = source_right;
+        float* planes[2] = { left.data(), right.data() };
 
-    ArSonKuPikEngine engine;
-    engine.prepare(sr, 2);
-    engine.set_runtime_params(params);
-    engine.process(planes, 2, frames);
+        RuntimeParams params;
+        params.preset_id = preset.id;
+        params.enhance = preset.macro.enhance;
+        params.smart_bass = preset.macro.smart_bass;
+        params.smart_treble = preset.macro.smart_treble;
+        params.vocal_body = preset.macro.vocal_body;
+        params.stereo_magic = preset.macro.stereo_magic;
+        params.output_trim_db = preset.output.output_gain_db;
+        params.smart_protect = preset.macro.smart_protect;
+        params.bypass = false;
+        params.advanced_override = false;
 
-    const auto& m = engine.meters();
-    std::cout << "preset=" << engine.current_preset().name << "\n";
-    std::cout << "input_peak_db=" << m.input_peak_db << "\n";
-    std::cout << "output_peak_db=" << m.output_peak_db << "\n";
-    std::cout << "gain_reduction_db=" << m.gain_reduction_db << "\n";
-    std::cout << "correlation=" << m.correlation << "\n";
-    if (!std::isfinite(m.output_peak_db) || m.output_peak_db > 1.0) return 2;
-    return 0;
+        ArSonKuPikEngine engine;
+        engine.prepare(sr, 2);
+        engine.set_runtime_params(params);
+        engine.process(planes, 2, frames);
+        const auto& m = engine.meters();
+        const double out_peak = peak_db(left, right);
+        const double benefit = out_peak - input_peak;
+        std::cout << preset.name
+                  << " input_peak_db=" << input_peak
+                  << " output_peak_db=" << out_peak
+                  << " benefit_db=" << benefit
+                  << " meter_gr_db=" << m.gain_reduction_db
+                  << " corr=" << m.correlation
+                  << " clipping=" << (m.clipping ? "yes" : "no")
+                  << "\n";
+        if (!std::isfinite(out_peak) || out_peak <= input_peak + 0.15 || out_peak > -0.20 || m.clipping) {
+            failed = true;
+        }
+    }
+    return failed ? 2 : 0;
 }

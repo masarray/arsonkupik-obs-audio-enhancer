@@ -1,0 +1,119 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-windows:
+    name: Build Windows release assets
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Visual Studio environment and build
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vsInstall = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsInstall) { throw 'Visual Studio C++ toolchain was not found.' }
+          $vsDevCmd = Join-Path $vsInstall 'Common7\Tools\VsDevCmd.bat'
+          $script = Join-Path $PWD 'scripts\build-windows-from-obs-release.ps1'
+          cmd /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 && powershell -NoProfile -ExecutionPolicy Bypass -File `"$script`" -OBSVersion latest"
+
+      - name: Build Windows portable ZIP
+        shell: pwsh
+        run: |
+          $pkg = Join-Path $PWD 'package-programdata\arsonkupik-obs-audio-enhancer'
+          $tag = '${{ github.ref_name }}'
+          Compress-Archive -Path $pkg -DestinationPath "ArSonKuPik-OBS-Audio-Enhancer-Windows-x64-$tag.zip" -Force
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Build Windows installer EXE
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler not found.' }
+          & $iscc "/DMyAppVersion=$version" "/DSourcePackageDir=$PWD\package-programdata\arsonkupik-obs-audio-enhancer" "$PWD\packaging\windows\ArSonKuPik-OBS-Audio-Enhancer.iss"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-assets
+          path: |
+            ArSonKuPik-OBS-Audio-Enhancer-Windows-x64-*.zip
+            packaging/windows/output/*.exe
+
+  build-linux:
+    name: Build Linux release asset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libobs-dev
+      - name: Configure
+        run: cmake -S . -B build-linux -DBUILD_OBS_PLUGIN=ON -DBUILD_STANDALONE_TESTS=ON
+      - name: Build
+        run: cmake --build build-linux --config Release
+      - name: Install package tree
+        run: cmake --install build-linux --config Release --prefix package-linux
+      - name: Create Linux tarball
+        run: tar -czf ArSonKuPik-OBS-Audio-Enhancer-Linux-x64-${GITHUB_REF_NAME}.tar.gz -C package-linux .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-assets
+          path: ArSonKuPik-OBS-Audio-Enhancer-Linux-x64-*.tar.gz
+
+  github-release:
+    name: Publish GitHub release
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-linux]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+      - name: Resolve release notes
+        id: notes
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [ -f "docs/releases/${TAG}.md" ]; then
+            echo "file=docs/releases/${TAG}.md" >> "$GITHUB_OUTPUT"
+          else
+            echo "file=docs/releases/latest.md" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/**/*
+          body_path: ${{ steps.notes.outputs.file }}
+          generate_release_notes: false
+
+  deploy-pages:
+    name: Deploy landing page
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs: github-release
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site
+      - id: deployment
+        uses: actions/deploy-pages@v4
