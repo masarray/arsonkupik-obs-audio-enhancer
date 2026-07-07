@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 3.22)
-project(arsonkupik-obs-audio-enhancer VERSION 0.4.4 LANGUAGES CXX)
+project(arsonkupik-obs-audio-enhancer VERSION 0.4.5 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Linux release builds link the static DSP library into the OBS module (.so).
+# The DSP target must therefore be position-independent, otherwise ld fails with
+# "recompile with -fPIC" when creating arsonkupik-obs-audio-enhancer.so.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(BUILD_OBS_PLUGIN "Build native OBS plugin target" ON)
 option(BUILD_STANDALONE_TESTS "Build standalone DSP smoke tests" ON)
@@ -13,6 +18,7 @@ add_library(arsonkupik_dsp STATIC
     src/arsonkupik_presets.cpp
 )
 target_include_directories(arsonkupik_dsp PUBLIC include)
+set_target_properties(arsonkupik_dsp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if (BUILD_OBS_PLUGIN)
     set(ARSONKUPIK_OBS_SOURCE_DIR "" CACHE PATH "OBS Studio source directory; fallback when libobsConfig.cmake is not available")

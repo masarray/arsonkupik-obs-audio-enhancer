@@ -41,3 +41,20 @@ jobs:
         run: cmake --build build-test --config Release
       - name: Run smoke test
         run: ./build-test/arsonkupik_dsp_smoke
+
+
+  linux-plugin-build:
+    name: Linux plugin build smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libobs-dev
+      - name: Configure
+        run: cmake -S . -B build-linux -DCMAKE_BUILD_TYPE=Release -DBUILD_OBS_PLUGIN=ON -DBUILD_STANDALONE_TESTS=ON
+      - name: Build
+        run: cmake --build build-linux --config Release
+      - name: Install package tree
+        run: cmake --install build-linux --config Release --prefix package-linux

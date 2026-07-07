@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.5] - 2026-07-07
+### Fixed
+- Fixed Linux release workflow link error by enabling position-independent code for the static DSP library.
+- Added Linux plugin build smoke test to CI.
+- Set Linux CMake release configuration explicitly.
+
 ## [0.4.4] - 2026-07-07
 ### Changed
 - Cleaned public repository helper scripts.

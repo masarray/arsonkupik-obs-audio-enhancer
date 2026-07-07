@@ -45,7 +45,7 @@ jobs:
           $version = '${{ github.ref_name }}'.TrimStart('v')
           $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
           if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler not found.' }
-          & $iscc "/DMyAppVersion=$version" "/DSourcePackageDir=$PWD\package-programdata\arsonkupik-obs-audio-enhancer" "$PWD\packaging\windows\ArSonKuPik-OBS-Audio-Enhancer.iss"
+          & $iscc "/DMyAppVersion=$version" "/DSourcePackageDir=$PWD\package-programdata\arsonkupik-obs-audio-enhancer" "$PWD\packaging\windows\arsonkupik-obs-audio-enhancer.iss"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -64,7 +64,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build pkg-config libobs-dev
       - name: Configure
-        run: cmake -S . -B build-linux -DBUILD_OBS_PLUGIN=ON -DBUILD_STANDALONE_TESTS=ON
+        run: cmake -S . -B build-linux -DCMAKE_BUILD_TYPE=Release -DBUILD_OBS_PLUGIN=ON -DBUILD_STANDALONE_TESTS=ON
       - name: Build
         run: cmake --build build-linux --config Release
       - name: Install package tree

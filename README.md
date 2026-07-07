@@ -80,7 +80,7 @@ The build helper uses `scripts/find-cmake.bat` internally to find CMake, includi
 
 ## Release automation
 
-Create a tag such as `v0.4.4` to trigger the release workflow. The workflow builds and publishes:
+Create a tag such as `v0.4.5` to trigger the release workflow. The workflow builds and publishes:
 
 - Windows installer `.exe`
 - Windows portable `.zip`

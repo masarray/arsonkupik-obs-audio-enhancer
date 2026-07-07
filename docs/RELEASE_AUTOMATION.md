@@ -1,7 +1,7 @@
 # Release automation
 
 ## Overview
-This repository publishes public release assets automatically when a version tag like `v0.4.3` is pushed.
+This repository publishes public release assets automatically when a version tag like `v0.4.5` is pushed.
 
 ## Published assets
 - Windows installer `.exe`
@@ -15,8 +15,8 @@ This repository publishes public release assets automatically when a version tag
 3. Create and push a tag:
 
 ```bash
-git tag v0.4.3
-git push origin v0.4.3
+git tag v0.4.5
+git push origin v0.4.5
 ```
 
 4. GitHub Actions builds artifacts and creates the release automatically.
