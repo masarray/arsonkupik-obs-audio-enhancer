@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.6] - 2026-07-07
+### Fixed
+- Fixed the release workflow badge/status by removing GitHub Pages deployment from tag-based releases.
+- Release workflow now only builds Windows assets, builds Linux assets, and publishes GitHub Releases.
+- GitHub Pages deployment remains handled by the separate Pages workflow from `main`.
+
 ## [0.4.5] - 2026-07-07
 ### Fixed
 - Fixed Linux release workflow link error by enabling position-independent code for the static DSP library.
