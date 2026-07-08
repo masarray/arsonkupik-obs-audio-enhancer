@@ -1,110 +1,129 @@
-# ArSonKuPik OBS Audio Enhancer
+<p align="center">
+  <img src="assets/images/og-hero.png" alt="ArSonKuPik OBS Audio Enhancer hero banner" width="100%" />
+</p>
 
-[![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![CI](https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/ci.yml/badge.svg)](https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/ci.yml)
-[![Release](https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/release.yml/badge.svg)](https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/release.yml)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational)](#downloads)
+<h1 align="center">ArSonKuPik OBS Audio Enhancer</h1>
 
-Professional smart audio enhancement filter for **OBS Studio**. ArSonKuPik is designed to make everyday playback, music, media, and spoken-word content sound **louder in perception, more polished, more alive, and more enjoyable** while keeping real-time OBS performance practical.
+<p align="center">
+  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/License-GPLv3-blue.svg"></a>
+  <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/release.yml"><img alt="Release" src="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/release.yml/badge.svg"></a>
+  <img alt="Platforms" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational">
+</p>
 
-> Goal: when the filter is ON, users should hear a meaningful benefit in loudness perception, clarity, stereo life, and listening enjoyment.
+<p align="center">
+  Smart audio enhancement for <strong>OBS Studio</strong> — designed to make music, media playback, and spoken audio sound <strong>louder in perception</strong>, <strong>more polished</strong>, and <strong>more enjoyable</strong> in real-world listening.
+</p>
+
+## Why ArSonKuPik?
+
+Most OBS audio workflows focus on technical control. ArSonKuPik focuses on the listener experience.
+
+When the filter is enabled, users should hear a clear benefit:
+
+- **Louder perception** without relying on harsh distortion
+- **Polished sound** with smarter enhancement and safer gain staging
+- **Stereo life** that feels wider and more alive without collapsing the center
+- **Simple workflow** built for real OBS use, not overcomplicated studio routing
 
 ## Screenshot
 
 ![ArSonKuPik OBS Audio Enhancer UI](assets/images/obs-filter-ui.webp)
 
-## Highlights
+## Key features
 
-- Smart loudness benefit tuned for real-world listener perception
-- Musical presets for music, media, podcast, and night listening
-- OBS-native audio filter workflow
-- Stereo integrity-first enhancement designed to preserve center focus
-- CPU-conscious DSP direction for live streaming
-- Automated public releases with installer, portable ZIP, Linux package, and release notes
+- **Native OBS audio filter** with a clean, direct UI
+- **Preset-driven enhancement** for music, media, podcast, and everyday listening
+- **Smart loudness benefit** that aims to feel better immediately to end users
+- **CPU-conscious DSP design** for practical streaming and recording use
+- **Windows installer and portable ZIP** for different user preferences
+- **Linux package archive** for manual deployment on supported systems
+- **Open-source GPL-3.0 licensing**
 
 ## Downloads
 
-Use the latest GitHub Release:
+Every public release is designed for real users, not only developers.
 
-- **Windows installer `.exe`** — recommended for most users
-- **Windows portable `.zip`** — manual copy/paste install
-- **Linux `.tar.gz`** — manual Linux package artifact
+- **Windows Installer (.exe)** — best for most users
+- **Windows Portable ZIP** — for advanced users who prefer manual copy/paste installation
+- **Linux Archive (.tar.gz)** — for supported Linux OBS setups
+- **Release Notes** — clear public notes describing what changed
 
-GitHub Releases: https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases
+**Latest release:**
+https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases
 
-## Install
+## Installation
 
 ### Windows installer
+1. Download the latest `ArSonKuPik-OBS-Audio-Enhancer-Setup-*.exe` from the Releases page.
+2. Close OBS Studio.
+3. Run the installer.
+4. Reopen OBS.
+5. Add **ArSonKuPik Smart Enhancer** as an audio filter.
 
-1. Close OBS Studio.
-2. Download `ArSonKuPik-OBS-Audio-Enhancer-Setup-vX.Y.Z.exe`.
-3. Run the installer as Administrator.
-4. Restart OBS Studio.
-5. Add the filter from **Audio Source → Filters → + → ArSonKuPik Smart Enhancer**.
-
-The installer uses the standard OBS ProgramData plugin location:
-
-```text
-C:\ProgramData\obs-studio\plugins\arsonkupik-obs-audio-enhancer
-```
-
-### Windows portable ZIP
-
-1. Close OBS Studio.
-2. Extract the ZIP.
-3. Copy the `arsonkupik-obs-audio-enhancer` folder into:
-
-```text
-C:\ProgramData\obs-studio\plugins\
-```
-
+### Windows manual ZIP install
+1. Download the latest Windows ZIP asset.
+2. Extract the archive.
+3. Copy the packaged plugin folder into:
+   - `C:\ProgramData\obs-studio\plugins\`
 4. Restart OBS.
+
+### Linux manual install
+1. Download the latest Linux `.tar.gz` asset.
+2. Extract it.
+3. Copy the packaged files into your OBS plugin path.
+4. Restart OBS.
+
+## Who this is for
+
+ArSonKuPik is especially suited for:
+
+- creators who want richer media playback inside OBS
+- users who want a more pleasant listening experience with minimal setup
+- podcast or spoken-word workflows that benefit from cleaner perceived presence
+- open-source users who want a native OBS filter instead of a browser-only solution
+
+## Build from source
+
+### Windows
+See [docs/BUILD_WINDOWS.md](docs/BUILD_WINDOWS.md)
+
+Quick local build:
+
+```powershell
+build_plugin_single_click.bat
+```
 
 ### Linux
 
-Extract the Linux `.tar.gz` release asset and copy the package contents into the appropriate OBS plugin path for your distribution/package style.
-
-## Local Windows build
-
-Only two root `.bat` files are kept intentionally:
-
-```text
-build_plugin_single_click.bat
-install_plugin_windows.bat
+```bash
+./scripts/build-linux.sh
 ```
 
-`build_plugin_single_click.bat` builds the OBS plugin and creates a ProgramData-ready package.
-`install_plugin_windows.bat` installs that local package into the standard OBS ProgramData plugin folder.
-
-The build helper uses `scripts/find-cmake.bat` internally to find CMake, including Visual Studio bundled CMake.
-
-## Release automation
-
-Create a tag such as `v0.4.5` to trigger the release workflow. The workflow builds and publishes:
-
-- Windows installer `.exe`
-- Windows portable `.zip`
-- Linux `.tar.gz`
-- public, user-facing release notes
-
-See [docs/RELEASE_AUTOMATION.md](docs/RELEASE_AUTOMATION.md).
-
-## Repository structure
+## Project structure
 
 ```text
 .github/            GitHub Actions workflows and templates
 assets/             README and branding assets
 data/               OBS plugin data and locale files
 docs/               public docs, release notes, and landing page
+docs/site/          GitHub Pages landing site
 include/            DSP headers
 packaging/windows/  Inno Setup installer script
-scripts/            build/package scripts
-src/                plugin + DSP source
+scripts/            build and packaging helpers
+src/                plugin and DSP source
 tests/              smoke tests
 ```
 
+## Documentation
+
+- [Build guide](docs/BUILD_WINDOWS.md)
+- [Release automation](docs/RELEASE_AUTOMATION.md)
+- [Release notes](docs/releases/)
+- [Support](SUPPORT.md)
+- [Security policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+
 ## License
 
-Licensed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE).
-
-ArSonKuPik is an independent open-source project and is not affiliated with or endorsed by OBS Project. OBS and OBS Studio are names/trademarks of their respective owners.
+Licensed under **GNU General Public License v3.0**. See [LICENSE](LICENSE).

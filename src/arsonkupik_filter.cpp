@@ -74,8 +74,10 @@ void read_settings(FilterData* f, obs_data_t* settings)
 
     p.bypass = obs_data_get_bool(settings, "bypass");
 
-    // Preset selection loads a recipe into the sliders. The sliders are always live,
-    // so every slider edit immediately becomes the active macro value.
+    // v0.4.3 UX: sliders are always live. Preset selection loads a recipe into
+    // the sliders, then every slider edit immediately becomes the active macro.
+    // The old "Manual macro tuning" checkbox was confusing and made the UI
+    // look editable while the DSP could still ignore the slider values.
     p.advanced_override = true;
     p.enhance = obs_data_get_double(settings, "enhance");
     p.smart_bass = obs_data_get_double(settings, "smart_bass");
@@ -153,6 +155,7 @@ obs_properties_t* get_properties(void*)
     obs_properties_add_float_slider(props, "stereo_magic", obs_module_text("StereoMagic"), 0.0, 100.0, 1.0);
     obs_properties_add_float_slider(props, "output_trim_db", obs_module_text("OutputTrim"), -6.0, 6.0, 0.1);
 
+    obs_properties_add_text(props, "note", obs_module_text("Note"), OBS_TEXT_INFO);
     return props;
 }
 
