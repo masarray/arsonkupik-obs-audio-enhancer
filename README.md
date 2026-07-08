@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer">
-    <img src="https://raw.githubusercontent.com/masarray/arsonkupik-obs-audio-enhancer/main/assets/images/og-hero.png" alt="ArSonKuPik OBS Audio Enhancer hero banner" width="100%" />
+    <img src="https://raw.githubusercontent.com/masarray/arsonkupik-obs-audio-enhancer/main/assets/images/og-hero.webp" alt="ArSonKuPik OBS Audio Enhancer hero banner" width="100%" />
   </a>
 </p>
 
