@@ -2,17 +2,13 @@
 
 All notable changes to this project are documented here.
 
-## [0.4.7] - 2026-07-07
-### Changed
-- Refreshed the public README with the new OG hero image and stronger product positioning.
-- Improved public copywriting for clearer downloads, installation, audience fit, and feature value.
-- Added marketing-ready release notes for public-facing distribution.
-
-## [0.4.6] - 2026-07-07
+## [0.4.9] - 2026-07-08
 ### Fixed
-- Fixed the release workflow status by removing GitHub Pages deployment from tag-based releases.
-- Release workflow now only builds Windows assets, builds Linux assets, and publishes GitHub Releases.
-- GitHub Pages deployment remains handled by the separate Pages workflow from `main`.
+- Fixed crackle/zipper noise when OBS sliders are moved while audio is running.
+- Reworked EQ rebuild to preserve existing biquad history and only retune coefficients during normal knob automation.
+- Replaced Butterworth Q allocation with static tables so repeated retunes do not allocate in the audio path.
+- Added 80 ms block-level smoothing for continuous OBS macro controls.
+- Added equal-power preset-switch fade around topology changes to avoid pop/click when changing presets.
 
 ## [0.4.5] - 2026-07-07
 ### Fixed

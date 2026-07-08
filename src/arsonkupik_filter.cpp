@@ -4,6 +4,7 @@
 #include "arsonkupik_dsp.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
 
@@ -14,10 +15,18 @@ using arsonkupik::ArSonKuPikEngine;
 using arsonkupik::RuntimeParams;
 
 namespace {
+constexpr double kPi = 3.1415926535897932384626433832795;
+constexpr double kKnobSmoothingSeconds = 0.080;
+constexpr double kPresetFadeSeconds = 0.005;
+
 struct FilterData {
     obs_source_t* source = nullptr;
     ArSonKuPikEngine engine;
     RuntimeParams params;
+    RuntimeParams target_params;
+    RuntimeParams pending_preset_params;
+    bool pending_preset_switch = false;
+    bool fade_in_after_preset = false;
     uint32_t sample_rate = 48000;
     size_t channels = 2;
 };
@@ -64,20 +73,16 @@ bool preset_modified(obs_properties_t*, obs_property_t*, obs_data_t* settings)
     return true;
 }
 
-void read_settings(FilterData* f, obs_data_t* settings)
+RuntimeParams read_settings(obs_data_t* settings)
 {
     RuntimeParams p;
     const char* preset = obs_data_get_string(settings, "preset");
     p.preset_id = preset && *preset ? preset : "default";
-    const arsonkupik::Preset* preset_cfg = arsonkupik::find_preset(p.preset_id);
-    if (!preset_cfg) preset_cfg = &arsonkupik::default_preset();
-
     p.bypass = obs_data_get_bool(settings, "bypass");
 
-    // v0.4.3 UX: sliders are always live. Preset selection loads a recipe into
-    // the sliders, then every slider edit immediately becomes the active macro.
-    // The old "Manual macro tuning" checkbox was confusing and made the UI
-    // look editable while the DSP could still ignore the slider values.
+    // Sliders are always live. Preset selection loads a recipe into the sliders,
+    // then every slider edit becomes the target macro value. Smoothing happens
+    // per audio block so mouse automation does not zipper/crackle.
     p.advanced_override = true;
     p.enhance = obs_data_get_double(settings, "enhance");
     p.smart_bass = obs_data_get_double(settings, "smart_bass");
@@ -86,14 +91,57 @@ void read_settings(FilterData* f, obs_data_t* settings)
     p.stereo_magic = obs_data_get_double(settings, "stereo_magic");
     p.output_trim_db = obs_data_get_double(settings, "output_trim_db");
     p.smart_protect = obs_data_get_bool(settings, "smart_protect");
-    f->params = p;
+    return p;
+}
+
+void smooth_runtime_params(FilterData* f, std::size_t frames)
+{
+    const double denom = std::max(1.0, static_cast<double>(f->sample_rate) * kKnobSmoothingSeconds);
+    const double alpha = 1.0 - std::exp(-static_cast<double>(frames) / denom);
+    auto smooth = [alpha](double current, double target) {
+        return current + (target - current) * alpha;
+    };
+
+    // The preset id is topology; continuous knobs are smoothed inside that topology.
+    f->params.preset_id = f->target_params.preset_id;
+    f->params.enhance = smooth(f->params.enhance, f->target_params.enhance);
+    f->params.smart_bass = smooth(f->params.smart_bass, f->target_params.smart_bass);
+    f->params.smart_treble = smooth(f->params.smart_treble, f->target_params.smart_treble);
+    f->params.vocal_body = smooth(f->params.vocal_body, f->target_params.vocal_body);
+    f->params.stereo_magic = smooth(f->params.stereo_magic, f->target_params.stereo_magic);
+    f->params.output_trim_db = smooth(f->params.output_trim_db, f->target_params.output_trim_db);
+    f->params.smart_protect = f->target_params.smart_protect;
+    f->params.bypass = f->target_params.bypass;
+    f->params.advanced_override = true;
+}
+
+void apply_equal_power_fade(float** planes, std::size_t channels, std::size_t frames, uint32_t sample_rate, bool fade_in)
+{
+    if (!planes || channels == 0 || frames == 0) return;
+    const std::size_t fade_frames = std::max<std::size_t>(1, std::min<std::size_t>(frames, static_cast<std::size_t>(sample_rate * kPresetFadeSeconds)));
+    const double denom = static_cast<double>(std::max<std::size_t>(1, fade_frames - 1));
+
+    for (std::size_t i = 0; i < frames; ++i) {
+        double gain = 1.0;
+        if (i < fade_frames) {
+            const double t = static_cast<double>(i) / denom;
+            gain = fade_in ? std::sin(t * kPi * 0.5) : std::cos(t * kPi * 0.5);
+        } else if (!fade_in) {
+            gain = 0.0;
+        }
+        for (std::size_t ch = 0; ch < channels; ++ch) {
+            if (planes[ch]) planes[ch][i] = static_cast<float>(planes[ch][i] * gain);
+        }
+    }
 }
 
 void* create(obs_data_t* settings, obs_source_t* source)
 {
     auto* f = new FilterData();
     f->source = source;
-    read_settings(f, settings);
+    f->params = read_settings(settings);
+    f->target_params = f->params;
+    f->pending_preset_params = f->params;
     f->sample_rate = current_sample_rate();
     f->channels = current_channel_count();
     f->engine.prepare(f->sample_rate, f->channels);
@@ -109,15 +157,26 @@ void destroy(void* data)
 void update(void* data, obs_data_t* settings)
 {
     auto* f = static_cast<FilterData*>(data);
-    read_settings(f, settings);
+    const RuntimeParams next = read_settings(settings);
+
+    // Preset changes can alter EQ topology. Defer the actual swap to the audio
+    // callback and micro-fade around it, instead of rebuilding immediately from
+    // the UI thread while audio is hot.
+    if (next.preset_id != f->target_params.preset_id) {
+        f->pending_preset_params = next;
+        f->pending_preset_switch = true;
+    } else {
+        f->target_params = next;
+    }
+
     const uint32_t sr = current_sample_rate();
     const size_t ch = current_channel_count();
     if (sr != f->sample_rate || ch != f->channels) {
         f->sample_rate = sr;
         f->channels = ch;
         f->engine.prepare(sr, ch);
+        f->engine.set_runtime_params(f->params);
     }
-    f->engine.set_runtime_params(f->params);
 }
 
 void get_defaults(obs_data_t* settings)
@@ -155,7 +214,6 @@ obs_properties_t* get_properties(void*)
     obs_properties_add_float_slider(props, "stereo_magic", obs_module_text("StereoMagic"), 0.0, 100.0, 1.0);
     obs_properties_add_float_slider(props, "output_trim_db", obs_module_text("OutputTrim"), -6.0, 6.0, 0.1);
 
-    obs_properties_add_text(props, "note", obs_module_text("Note"), OBS_TEXT_INFO);
     return props;
 }
 
@@ -179,7 +237,28 @@ obs_audio_data* filter_audio(void* data, obs_audio_data* audio)
         planes[i] = reinterpret_cast<float*>(audio->data[i]);
     }
     if (!planes[0]) return audio;
+
+    if (f->pending_preset_switch) {
+        f->engine.process(planes, channels, audio->frames);
+        apply_equal_power_fade(planes, channels, audio->frames, f->sample_rate, false);
+
+        f->params = f->pending_preset_params;
+        f->target_params = f->pending_preset_params;
+        f->pending_preset_switch = false;
+        f->fade_in_after_preset = true;
+        f->engine.set_runtime_params(f->params);
+        return audio;
+    }
+
+    smooth_runtime_params(f, audio->frames);
+    f->engine.set_runtime_params(f->params);
     f->engine.process(planes, channels, audio->frames);
+
+    if (f->fade_in_after_preset) {
+        apply_equal_power_fade(planes, channels, audio->frames, f->sample_rate, true);
+        f->fade_in_after_preset = false;
+    }
+
     return audio;
 }
 

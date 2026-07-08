@@ -9,13 +9,23 @@ namespace {
 constexpr double kPi = 3.1415926535897932384626433832795;
 constexpr double kMinDb = -120.0;
 
-std::vector<double> butterworth_q_values(int slope)
+struct QTableView {
+    const double* values = nullptr;
+    std::size_t count = 0;
+};
+
+QTableView butterworth_q_values(int slope)
 {
+    static constexpr double q48[] = {0.50979558, 0.60134489, 0.89997622, 2.56291545};
+    static constexpr double q36[] = {0.51763809, 0.70710678, 1.93185165};
+    static constexpr double q24[] = {0.54119610, 1.30656296};
+    static constexpr double q12[] = {0.70710678};
+
     switch (slope) {
-    case 48: return {0.50979558, 0.60134489, 0.89997622, 2.56291545};
-    case 36: return {0.51763809, 0.70710678, 1.93185165};
-    case 24: return {0.54119610, 1.30656296};
-    default: return {0.70710678};
+    case 48: return {q48, 4};
+    case 36: return {q36, 3};
+    case 24: return {q24, 2};
+    default: return {q12, 1};
     }
 }
 
@@ -371,14 +381,50 @@ void ArSonKuPikEngine::rebuild_from_preset()
 
 void ArSonKuPikEngine::rebuild_eq()
 {
-    eq_filters_.clear();
+    struct EqStageSpec {
+        EqType type = EqType::Bell;
+        double frequency = 1000.0;
+        double q = 0.70710678;
+        double gain_db = 0.0;
+    };
+
+    // VST-style crackle fix: do not clear/recreate biquads while the audio is
+    // running. Slider moves only retune coefficients and preserve z1/z2 history.
+    // The vector is resized only when topology changes, e.g. a preset with a
+    // different number of EQ stages. Normal knob automation is allocation-free.
+    constexpr std::size_t kMaxEqStages = 64;
+    std::array<EqStageSpec, kMaxEqStages> stages{};
+    std::size_t stage_count = 0;
+
+    auto add_stage = [&](EqType type, double frequency, double q, double gain_db) {
+        if (stage_count >= kMaxEqStages) return;
+        stages[stage_count++] = EqStageSpec{type, frequency, q, gain_db};
+    };
+
     for (const auto& band : working_.eq) {
         if (!band.enabled) continue;
-        const auto qs = (band.type == EqType::LowCut || band.type == EqType::HighCut) ? butterworth_q_values(band.slope_db_per_oct) : std::vector<double>{band.q};
-        for (double q : qs) {
-            std::array<Biquad, kMaxChannels> chs;
-            for (auto& b : chs) b.set(band.type, sample_rate_, band.frequency, q, band.gain_db);
-            eq_filters_.push_back(chs);
+        if (band.type == EqType::LowCut || band.type == EqType::HighCut) {
+            const auto qs = butterworth_q_values(band.slope_db_per_oct);
+            for (std::size_t i = 0; i < qs.count; ++i) {
+                add_stage(band.type, band.frequency, qs.values[i], band.gain_db);
+            }
+        } else {
+            add_stage(band.type, band.frequency, band.q, band.gain_db);
+        }
+    }
+
+    if (eq_filters_.size() != stage_count) {
+        eq_filters_.resize(stage_count);
+        for (auto& chs : eq_filters_) {
+            for (auto& b : chs) b.reset();
+        }
+    }
+
+    for (std::size_t stage = 0; stage < stage_count; ++stage) {
+        const auto& spec = stages[stage];
+        auto& chs = eq_filters_[stage];
+        for (auto& b : chs) {
+            b.set(spec.type, sample_rate_, spec.frequency, spec.q, spec.gain_db);
         }
     }
 }
