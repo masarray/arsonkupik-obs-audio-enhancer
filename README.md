@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="assets/images/og-hero.png" alt="ArSonKuPik OBS Audio Enhancer hero banner" width="100%" />
+  <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer">
+    <img src="https://raw.githubusercontent.com/masarray/arsonkupik-obs-audio-enhancer/main/assets/images/og-hero.png" alt="ArSonKuPik OBS Audio Enhancer hero banner" width="100%" />
+  </a>
 </p>
 
 <h1 align="center">ArSonKuPik OBS Audio Enhancer</h1>
@@ -12,19 +14,32 @@
 </p>
 
 <p align="center">
-  Smart audio enhancement for <strong>OBS Studio</strong> — designed to make music, media playback, and spoken audio sound <strong>louder in perception</strong>, <strong>more polished</strong>, and <strong>more enjoyable</strong> in real-world listening.
+  A native OBS Studio audio filter for creators who want media, music, and spoken audio to feel <strong>louder in perception</strong>, <strong>more polished</strong>, and <strong>more alive</strong> without a complicated studio workflow.
 </p>
+
+<p align="center">
+  <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases"><strong>Download latest release</strong></a>
+  ·
+  <a href="docs/BUILD_WINDOWS.md">Build guide</a>
+  ·
+  <a href="docs/releases/">Release notes</a>
+</p>
+
+## What it does
+
+ArSonKuPik is an open-source smart audio enhancement filter for **OBS Studio**. It is built for real listening benefit: when the filter is enabled, users should hear a meaningful improvement in loudness perception, clarity, stereo life, and overall enjoyment.
+
+It is not meant to be a complicated mastering suite. It is a practical OBS-native enhancer for creators, streamers, media playback workflows, podcast-style voices, and users who want a more satisfying sound with simple controls.
 
 ## Why ArSonKuPik?
 
-Most OBS audio workflows focus on technical control. ArSonKuPik focuses on the listener experience.
+Most OBS audio chains focus on technical correction. ArSonKuPik focuses on how the listener experiences the sound.
 
-When the filter is enabled, users should hear a clear benefit:
-
-- **Louder perception** without relying on harsh distortion
-- **Polished sound** with smarter enhancement and safer gain staging
-- **Stereo life** that feels wider and more alive without collapsing the center
-- **Simple workflow** built for real OBS use, not overcomplicated studio routing
+- **Louder perception** — designed to feel more present and satisfying without relying on obvious distortion
+- **Polished sound** — improves everyday playback with cleaner tonal balance and smarter gain staging
+- **Stereo life** — aims for a wider, livelier presentation while protecting center focus
+- **Simple workflow** — preset-first controls with live sliders that are easy for normal users to understand
+- **Open-source delivery** — GPL-3.0, public releases, Windows installer, Windows ZIP, and Linux archive
 
 ## Screenshot
 
@@ -32,29 +47,32 @@ When the filter is enabled, users should hear a clear benefit:
 
 ## Key features
 
-- **Native OBS audio filter** with a clean, direct UI
-- **Preset-driven enhancement** for music, media, podcast, and everyday listening
-- **Smart loudness benefit** that aims to feel better immediately to end users
-- **CPU-conscious DSP design** for practical streaming and recording use
-- **Windows installer and portable ZIP** for different user preferences
-- **Linux package archive** for manual deployment on supported systems
-- **Open-source GPL-3.0 licensing**
+| Feature | Benefit |
+| --- | --- |
+| Native OBS filter | Works directly inside OBS as an audio filter |
+| Smart enhancement presets | Quick starting points for music, media, podcast, and night listening |
+| Perceived loudness benefit | Aims to make Filter ON clearly more useful than raw/bypass audio |
+| Stereo integrity approach | Adds life without intentionally making the sound hollow or phasey |
+| CPU-conscious DSP | Designed for practical streaming and recording workflows |
+| Release automation | Publishes installer, portable ZIP, Linux archive, and public notes |
 
 ## Downloads
 
-Every public release is designed for real users, not only developers.
+Every public release is packaged for both regular users and advanced users.
 
-- **Windows Installer (.exe)** — best for most users
-- **Windows Portable ZIP** — for advanced users who prefer manual copy/paste installation
-- **Linux Archive (.tar.gz)** — for supported Linux OBS setups
-- **Release Notes** — clear public notes describing what changed
+| Platform | Recommended asset | Use case |
+| --- | --- | --- |
+| Windows | `.exe` installer | Best for most users |
+| Windows | portable `.zip` | Manual copy/paste install |
+| Linux | `.tar.gz` archive | Manual OBS plugin deployment |
 
-**Latest release:**
+**Latest release:**  
 https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases
 
 ## Installation
 
 ### Windows installer
+
 1. Download the latest `ArSonKuPik-OBS-Audio-Enhancer-Setup-*.exe` from the Releases page.
 2. Close OBS Studio.
 3. Run the installer.
@@ -62,6 +80,7 @@ https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases
 5. Add **ArSonKuPik Smart Enhancer** as an audio filter.
 
 ### Windows manual ZIP install
+
 1. Download the latest Windows ZIP asset.
 2. Extract the archive.
 3. Copy the packaged plugin folder into:
@@ -69,24 +88,27 @@ https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases
 4. Restart OBS.
 
 ### Linux manual install
+
 1. Download the latest Linux `.tar.gz` asset.
 2. Extract it.
 3. Copy the packaged files into your OBS plugin path.
 4. Restart OBS.
 
-## Who this is for
+## Best fit
 
-ArSonKuPik is especially suited for:
+ArSonKuPik is especially useful for:
 
 - creators who want richer media playback inside OBS
-- users who want a more pleasant listening experience with minimal setup
-- podcast or spoken-word workflows that benefit from cleaner perceived presence
-- open-source users who want a native OBS filter instead of a browser-only solution
+- users who want audio to feel more alive with minimal setup
+- podcast or spoken-word workflows that need cleaner perceived presence
+- music/media sources that benefit from a more polished listening character
+- open-source users who prefer native OBS plugins over browser-only audio enhancement
 
 ## Build from source
 
 ### Windows
-See [docs/BUILD_WINDOWS.md](docs/BUILD_WINDOWS.md)
+
+See [docs/BUILD_WINDOWS.md](docs/BUILD_WINDOWS.md).
 
 Quick local build:
 
@@ -126,4 +148,4 @@ tests/              smoke tests
 
 ## License
 
-Licensed under **GNU General Public License v3.0**. See [LICENSE](LICENSE).
+ArSonKuPik OBS Audio Enhancer is licensed under **GNU General Public License v3.0**. See [LICENSE](LICENSE).
