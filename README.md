@@ -1,11 +1,29 @@
-# ArSonKuPik OBS Audio Enhancer
+<p align="center">
+  <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer">
+    <img src="assets/images/og-hero.webp" alt="ArSonKuPik OBS Audio Enhancer hero banner" width="100%">
+  </a>
+</p>
 
-[![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![CI](https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/ci.yml/badge.svg)](https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/ci.yml)
-[![Release](https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/release.yml/badge.svg)](https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/release.yml)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational)](#downloads)
+<h1 align="center">ArSonKuPik OBS Audio Enhancer</h1>
 
-Professional smart audio enhancement filter for **OBS Studio**. ArSonKuPik is designed to make everyday playback, music, media, and spoken-word content sound **louder in perception, more polished, more alive, and more enjoyable** while keeping real-time OBS performance practical.
+<p align="center">
+  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/License-GPLv3-blue.svg"></a>
+  <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/release.yml"><img alt="Release" src="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/release.yml/badge.svg"></a>
+  <a href="#downloads"><img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational"></a>
+</p>
+
+<p align="center">
+  Professional smart audio enhancement filter for <strong>OBS Studio</strong>. Built for everyday playback, music, media, and spoken-word content that should feel louder in perception, more polished, more alive, and more enjoyable without impractical real-time CPU cost.
+</p>
+
+<p align="center">
+  <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases"><strong>Download latest release</strong></a>
+  ·
+  <a href="docs/BUILD_WINDOWS.md">Build guide</a>
+  ·
+  <a href="docs/releases/">Release notes</a>
+</p>
 
 > Goal: when the filter is ON, users should hear a meaningful benefit in loudness perception, clarity, stereo life, and listening enjoyment.
 
@@ -73,19 +91,24 @@ build_plugin_single_click.bat
 install_plugin_windows.bat
 ```
 
-`build_plugin_single_click.bat` builds the OBS plugin and creates a ProgramData-ready package.
+`build_plugin_single_click.bat` builds the OBS plugin and creates a ProgramData-ready package.  
 `install_plugin_windows.bat` installs that local package into the standard OBS ProgramData plugin folder.
 
 The build helper uses `scripts/find-cmake.bat` internally to find CMake, including Visual Studio bundled CMake.
 
 ## Release automation
 
-Create a tag such as `v0.4.5` to trigger the release workflow. The workflow builds and publishes:
+Create and push a version tag to trigger the release workflow. The workflow builds and publishes:
 
 - Windows installer `.exe`
 - Windows portable `.zip`
 - Linux `.tar.gz`
 - public, user-facing release notes
+
+```bash
+git tag -a vX.Y.Z -m "ArSonKuPik OBS Audio Enhancer vX.Y.Z"
+git push origin vX.Y.Z
+```
 
 See [docs/RELEASE_AUTOMATION.md](docs/RELEASE_AUTOMATION.md).
 
