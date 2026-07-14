@@ -24,6 +24,7 @@ struct FilterData {
     ArSonKuPikEngine engine;
     RuntimeParams params;
     RuntimeParams target_params;
+    RuntimeParams applied_params;
     RuntimeParams pending_preset_params;
     bool pending_preset_switch = false;
     bool fade_in_after_preset = false;
@@ -94,25 +95,44 @@ RuntimeParams read_settings(obs_data_t* settings)
     return p;
 }
 
-void smooth_runtime_params(FilterData* f, std::size_t frames)
+bool runtime_params_close(const RuntimeParams& a, const RuntimeParams& b)
 {
+    auto near = [](double x, double y, double eps) { return std::abs(x - y) <= eps; };
+    return a.preset_id == b.preset_id &&
+           a.advanced_override == b.advanced_override &&
+           a.smart_protect == b.smart_protect &&
+           a.bypass == b.bypass &&
+           near(a.enhance, b.enhance, 0.020) &&
+           near(a.smart_bass, b.smart_bass, 0.020) &&
+           near(a.smart_treble, b.smart_treble, 0.020) &&
+           near(a.vocal_body, b.vocal_body, 0.020) &&
+           near(a.stereo_magic, b.stereo_magic, 0.020) &&
+           near(a.output_trim_db, b.output_trim_db, 0.005);
+}
+
+bool smooth_runtime_params(FilterData* f, std::size_t frames)
+{
+    const RuntimeParams before = f->params;
     const double denom = std::max(1.0, static_cast<double>(f->sample_rate) * kKnobSmoothingSeconds);
     const double alpha = 1.0 - std::exp(-static_cast<double>(frames) / denom);
-    auto smooth = [alpha](double current, double target) {
-        return current + (target - current) * alpha;
+    auto smooth = [alpha](double current, double target, double snap_eps) {
+        const double next = current + (target - current) * alpha;
+        return std::abs(next - target) <= snap_eps ? target : next;
     };
 
     // The preset id is topology; continuous knobs are smoothed inside that topology.
+    // Snap-to-target stops infinite tiny retunes after the knob has audibly settled.
     f->params.preset_id = f->target_params.preset_id;
-    f->params.enhance = smooth(f->params.enhance, f->target_params.enhance);
-    f->params.smart_bass = smooth(f->params.smart_bass, f->target_params.smart_bass);
-    f->params.smart_treble = smooth(f->params.smart_treble, f->target_params.smart_treble);
-    f->params.vocal_body = smooth(f->params.vocal_body, f->target_params.vocal_body);
-    f->params.stereo_magic = smooth(f->params.stereo_magic, f->target_params.stereo_magic);
-    f->params.output_trim_db = smooth(f->params.output_trim_db, f->target_params.output_trim_db);
+    f->params.enhance = smooth(f->params.enhance, f->target_params.enhance, 0.010);
+    f->params.smart_bass = smooth(f->params.smart_bass, f->target_params.smart_bass, 0.010);
+    f->params.smart_treble = smooth(f->params.smart_treble, f->target_params.smart_treble, 0.010);
+    f->params.vocal_body = smooth(f->params.vocal_body, f->target_params.vocal_body, 0.010);
+    f->params.stereo_magic = smooth(f->params.stereo_magic, f->target_params.stereo_magic, 0.010);
+    f->params.output_trim_db = smooth(f->params.output_trim_db, f->target_params.output_trim_db, 0.003);
     f->params.smart_protect = f->target_params.smart_protect;
     f->params.bypass = f->target_params.bypass;
     f->params.advanced_override = true;
+    return !runtime_params_close(before, f->params);
 }
 
 void apply_equal_power_fade(float** planes, std::size_t channels, std::size_t frames, uint32_t sample_rate, bool fade_in)
@@ -146,6 +166,7 @@ void* create(obs_data_t* settings, obs_source_t* source)
     f->channels = current_channel_count();
     f->engine.prepare(f->sample_rate, f->channels);
     f->engine.set_runtime_params(f->params);
+    f->applied_params = f->params;
     return f;
 }
 
@@ -176,6 +197,7 @@ void update(void* data, obs_data_t* settings)
         f->channels = ch;
         f->engine.prepare(sr, ch);
         f->engine.set_runtime_params(f->params);
+        f->applied_params = f->params;
     }
 }
 
@@ -229,6 +251,7 @@ obs_audio_data* filter_audio(void* data, obs_audio_data* audio)
         f->channels = ch;
         f->engine.prepare(sr, ch);
         f->engine.set_runtime_params(f->params);
+        f->applied_params = f->params;
     }
 
     float* planes[arsonkupik::kMaxChannels] = {};
@@ -247,11 +270,15 @@ obs_audio_data* filter_audio(void* data, obs_audio_data* audio)
         f->pending_preset_switch = false;
         f->fade_in_after_preset = true;
         f->engine.set_runtime_params(f->params);
+        f->applied_params = f->params;
         return audio;
     }
 
-    smooth_runtime_params(f, audio->frames);
-    f->engine.set_runtime_params(f->params);
+    const bool smoothed = smooth_runtime_params(f, audio->frames);
+    if (smoothed || !runtime_params_close(f->applied_params, f->params)) {
+        f->engine.set_runtime_params(f->params);
+        f->applied_params = f->params;
+    }
     f->engine.process(planes, channels, audio->frames);
 
     if (f->fade_in_after_preset) {

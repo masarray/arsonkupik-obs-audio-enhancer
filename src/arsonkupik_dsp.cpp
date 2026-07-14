@@ -744,11 +744,17 @@ void ArSonKuPikEngine::process(float** planes, std::size_t channels, std::size_t
         smart_prelim_peak_env_ += prelim_alpha * (prelim_peak_now - smart_prelim_peak_env_);
         const double prelim_db = gain_to_db(smart_prelim_peak_env_ + 1.0e-12);
         const double reserved_db = -smart_headroom_db_;
-        const double macro_loudness_db = 1.05 + clamp01(params_.enhance / 100.0) * 1.35 + clamp01(params_.vocal_body / 100.0) * 0.30;
-        const double peak_penalty = std::max(0.0, prelim_db + 1.35) * 0.90;
-        const double limiter_penalty = std::max(0.0, limiter_.gain_reduction_db() - 1.25) * 0.65;
-        const double target_makeup_db = clamp(macro_loudness_db + reserved_db * 0.62 - peak_penalty - limiter_penalty, 0.75, 5.6);
-        smart_makeup_db_ += stage_alpha * (target_makeup_db - smart_makeup_db_);
+        const double macro_loudness_db = 0.95 + clamp01(params_.enhance / 100.0) * 1.10 + clamp01(params_.vocal_body / 100.0) * 0.22;
+        const double peak_penalty = std::max(0.0, prelim_db + 1.55) * 1.05;
+        const double limiter_penalty = std::max(0.0, limiter_.gain_reduction_db() - 0.85) * 0.80;
+        const double target_makeup_db = clamp(macro_loudness_db + reserved_db * 0.52 - peak_penalty - limiter_penalty, 0.65, 4.35);
+
+        // Anti-pumping policy: reduce makeup quickly when peaks get hot, but
+        // restore gain more slowly so sustained music does not breathe/pump.
+        const double makeup_fall_alpha = 1.0 - std::exp(-1.0 / (sample_rate_ * 0.080));
+        const double makeup_rise_alpha = 1.0 - std::exp(-1.0 / (sample_rate_ * 0.420));
+        const double makeup_alpha = target_makeup_db < smart_makeup_db_ ? makeup_fall_alpha : makeup_rise_alpha;
+        smart_makeup_db_ += makeup_alpha * (target_makeup_db - smart_makeup_db_);
         const double total_output_gain = output_gain * db_to_gain(smart_makeup_db_);
 
         l = sane(static_cast<float>(l * total_output_gain));

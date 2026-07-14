@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.10] - 2026-07-08
+### Fixed
+- Tightened the crackle-free parameter patch after audit.
+- Added snap-to-target and dirty-apply behavior so the OBS wrapper stops retuning once smoothed parameters have settled.
+- Reduced CPU overhead during idle playback by avoiding repeated engine retunes when parameters are unchanged.
+- Slowed makeup recovery and made hot-peak reduction faster to reduce audible pumping under dense music.
+
 ## [0.4.9] - 2026-07-08
 ### Fixed
 - Fixed crackle/zipper noise when OBS sliders are moved while audio is running.
