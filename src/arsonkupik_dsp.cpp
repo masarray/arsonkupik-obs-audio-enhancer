@@ -8,6 +8,12 @@ namespace arsonkupik {
 namespace {
 constexpr double kPi = 3.1415926535897932384626433832795;
 constexpr double kMinDb = -120.0;
+// v0.4.12 calibrated gain staging: keep the creative rack from running
+// too hot, then restore only part of the reserved headroom so Filter ON
+// lands around a tasteful +3 to +4 dB perceived/peak benefit instead of
+// jumping like a +20 dB hidden volume boost.
+constexpr double kInternalChainHeadroomDb = -8.0;
+constexpr double kInternalRestoreDb = 4.0;
 
 struct QTableView {
     const double* values = nullptr;
@@ -469,13 +475,13 @@ void ArSonKuPikEngine::apply_macros()
     working_.compressor.attack_sec = clamp(0.046 - 0.015 * vocal + 0.006 * (1.0 - enhance), 0.018, 0.064);
     working_.compressor.release_sec = clamp(0.145 + 0.040 * enhance + 0.035 * vocal, 0.100, 0.260);
     working_.compressor.parallel_mix = clamp(40.0 * enhance + 24.0 * vocal, 0.0, 66.0);
-    working_.compressor.makeup_gain_db = clamp(0.25 + 1.35 * enhance + 1.45 * vocal, 0.0, 4.2);
+    working_.compressor.makeup_gain_db = clamp(0.10 + 0.85 * enhance + 0.95 * vocal, 0.0, 2.4);
 
     // Stable no-pumping guard. Stronger knobs should be obvious, but the main mix
     // must not breathe after bass hits, so full-band compression remains moderate.
     working_.compressor.ratio = std::min(working_.compressor.ratio, 1.52);
-    working_.compressor.parallel_mix = std::min(working_.compressor.parallel_mix, 48.0);
-    working_.compressor.makeup_gain_db = std::min(working_.compressor.makeup_gain_db, 2.8);
+    working_.compressor.parallel_mix = std::min(working_.compressor.parallel_mix, 42.0);
+    working_.compressor.makeup_gain_db = std::min(working_.compressor.makeup_gain_db, 1.35);
     working_.compressor.release_sec = std::max(working_.compressor.release_sec, 0.120);
 
     // Stereo: left narrows down to mono, 50 = raw, right widens/open side air.
@@ -501,10 +507,10 @@ void ArSonKuPikEngine::apply_macros()
     }
 
     // Perceived loudness benefit without making sectoral knobs a hidden volume control.
-    const double perceived_benefit_db = enhance * 1.20 + vocal * 0.70
-                                      + trebleBoost * 0.20 + bassBoost * 0.10
-                                      - vocalTuck * 0.10;
-    working_.output.output_gain_db = params_.output_trim_db + perceived_benefit_db - 1.20;
+    const double perceived_benefit_db = enhance * 0.72 + vocal * 0.38
+                                      + trebleBoost * 0.10 + bassBoost * 0.06
+                                      - vocalTuck * 0.08;
+    working_.output.output_gain_db = params_.output_trim_db + perceived_benefit_db - 1.00;
     working_.output.bypass = params_.bypass;
     working_.output.punch_protect = params_.smart_protect;
 
@@ -841,7 +847,7 @@ void ArSonKuPikEngine::process(float** planes, std::size_t channels, std::size_t
     channels = std::min<std::size_t>(channels, channels_);
     if (channels == 0) return;
 
-    const double input_gain = db_to_gain(working_.output.input_gain_db);
+    const double input_gain = db_to_gain(working_.output.input_gain_db + kInternalChainHeadroomDb);
     const double output_gain = db_to_gain(working_.output.output_gain_db);
     const double bypass_t = params_.bypass ? 1.0 : 0.0;
 
@@ -892,10 +898,10 @@ void ArSonKuPikEngine::process(float** planes, std::size_t channels, std::size_t
         smart_prelim_peak_env_ += prelim_alpha * (prelim_peak_now - smart_prelim_peak_env_);
         const double prelim_db = gain_to_db(smart_prelim_peak_env_ + 1.0e-12);
         const double reserved_db = -smart_headroom_db_;
-        const double macro_loudness_db = 0.95 + clamp01(params_.enhance / 100.0) * 1.10 + clamp01(params_.vocal_body / 100.0) * 0.22;
-        const double peak_penalty = std::max(0.0, prelim_db + 1.55) * 1.05;
-        const double limiter_penalty = std::max(0.0, limiter_.gain_reduction_db() - 0.85) * 0.80;
-        const double target_makeup_db = clamp(macro_loudness_db + reserved_db * 0.52 - peak_penalty - limiter_penalty, 0.65, 4.35);
+        const double macro_loudness_db = 0.35 + clamp01(params_.enhance / 100.0) * 0.72 + clamp01(params_.vocal_body / 100.0) * 0.12;
+        const double peak_penalty = std::max(0.0, prelim_db + 2.15) * 1.20;
+        const double limiter_penalty = std::max(0.0, limiter_.gain_reduction_db() - 0.55) * 0.95;
+        const double target_makeup_db = clamp(macro_loudness_db + (reserved_db + kInternalRestoreDb) * 0.42 - peak_penalty - limiter_penalty, 0.65, 2.65);
 
         // Anti-pumping policy: reduce makeup quickly when peaks get hot, but
         // restore gain more slowly so sustained music does not breathe/pump.

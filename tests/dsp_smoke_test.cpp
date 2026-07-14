@@ -70,7 +70,10 @@ int main()
                   << " corr=" << m.correlation
                   << " clipping=" << (m.clipping ? "yes" : "no")
                   << "\n";
-        if (!std::isfinite(out_peak) || out_peak <= input_peak + 0.15 || out_peak > -0.20 || m.clipping) {
+        const bool defaultLevelOutsideTarget = preset.id == "default" && (benefit < 2.0 || benefit > 4.5);
+        const bool extremeHiddenVolumeBoost = benefit > 5.0;
+        if (!std::isfinite(out_peak) || out_peak > -0.20 || m.clipping
+            || defaultLevelOutsideTarget || extremeHiddenVolumeBoost) {
             failed = true;
         }
     }

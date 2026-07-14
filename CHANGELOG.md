@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.12] - 2026-07-14
+### Fixed
+- Recalibrated ON/OFF gain staging so Filter ON targets a tasteful wow effect instead of a hidden large volume jump.
+- Added an internal -8 dB creative-chain headroom trim before EQ/color/compressor processing.
+- Restored only partial headroom after the creative rack and reduced smart makeup caps so the main MasAri preset lands near +3 to +4 dB instead of extreme loudness.
+- Reduced compressor makeup and parallel density caps to keep audio stable and avoid pumping while preserving the stronger v0.4.11 macro knob feel.
+- Updated the DSP smoke test to catch extreme hidden volume boost regressions.
+
 ## [0.4.11] - 2026-07-14
 ### Changed
 - Ported the stronger askp-vst style macro-to-micro mapping into the OBS engine.

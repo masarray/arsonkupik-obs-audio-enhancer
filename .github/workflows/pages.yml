@@ -1,7 +1,6 @@
 name: Deploy Pages Preview
 
 on:
-  workflow_dispatch:
   push:
     branches: [main, master]
     paths:
