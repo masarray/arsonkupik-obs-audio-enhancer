@@ -272,6 +272,8 @@ ArSonKuPikEngine::ArSonKuPikEngine()
 {
     preset_ = default_preset();
     working_ = preset_;
+    working_.eq.reserve(96);
+    eq_filters_.reserve(96);
 }
 
 void ArSonKuPikEngine::prepare(double sample_rate, std::size_t channels)
@@ -291,6 +293,7 @@ void ArSonKuPikEngine::set_runtime_params(const RuntimeParams& params)
     const Preset* p = find_preset(params.preset_id);
     preset_ = p ? *p : default_preset();
     working_ = preset_;
+    working_.eq.reserve(96);
     apply_macros();
     rebuild_from_preset();
 }
@@ -319,54 +322,198 @@ void ArSonKuPikEngine::reset()
 
 void ArSonKuPikEngine::apply_macros()
 {
-    // Macro controls are intentionally deltas around the frozen preset recipe.
+    // v0.4.11: VST-style macro-to-micro mapping ported from askp-vst.
+    // Sectoral knobs are center-based: 50% = neutral, left = clean/reduce,
+    // right = enhance/boost. Each knob drives several internal controls so
+    // min/max movement is clearly audible while the crackle-free v0.4.10
+    // wrapper smoothing keeps automation safe.
     const double ui_enhance = params_.advanced_override ? params_.enhance : working_.macro.enhance;
-    const double ui_bass = params_.advanced_override ? params_.smart_bass : working_.macro.smart_bass;
-    const double ui_treble = params_.advanced_override ? params_.smart_treble : working_.macro.smart_treble;
-    const double ui_vocal = params_.advanced_override ? params_.vocal_body : working_.macro.vocal_body;
-    const double ui_stereo = params_.advanced_override ? params_.stereo_magic : working_.macro.stereo_magic;
+    const double ui_bass    = params_.advanced_override ? params_.smart_bass : working_.macro.smart_bass;
+    const double ui_treble  = params_.advanced_override ? params_.smart_treble : working_.macro.smart_treble;
+    const double ui_vocal   = params_.advanced_override ? params_.vocal_body : working_.macro.vocal_body;
+    const double ui_stereo  = params_.advanced_override ? params_.stereo_magic : working_.macro.stereo_magic;
 
-    const double enhance = clamp01(ui_enhance / 100.0);
-    const double bass = clamp01(ui_bass / 100.0);
-    const double treble = clamp01(ui_treble / 100.0);
-    const double vocal = clamp01(ui_vocal / 100.0);
-    const double stereo = clamp01(ui_stereo / 100.0);
-    const double masari = clamp01(working_.macro.masari_feel / 100.0);
-
-    auto add = [](double base, double delta, double lo, double hi) {
-        return clamp(base + delta, lo, hi);
+    auto exp01 = [](double x, double curve) {
+        return std::pow(clamp01(x), curve);
+    };
+    auto bipolar = [&](double percent, double curve) {
+        const double x = clamp01(percent / 100.0);
+        const double signedLinear = (x - 0.5) * 2.0;
+        return signedLinear >= 0.0 ?  exp01( signedLinear, curve)
+                                   : -exp01(-signedLinear, curve);
+    };
+    auto endpointLift = [](double amount) {
+        const double x = clamp01((amount - 0.55) / 0.45);
+        return x * x * (3.0 - 2.0 * x);
+    };
+    auto topologyActivation = [](double amount) {
+        const double x = clamp01(amount / 0.025);
+        return x * x * (3.0 - 2.0 * x);
+    };
+    auto addBand = [&](EqType type, double freq, double gain, double q,
+                       int slope = 12, bool enabled = true) {
+        EqBand b;
+        b.type = type;
+        b.frequency = freq;
+        b.gain_db = gain;
+        b.q = q;
+        b.slope_db_per_oct = slope;
+        b.enabled = enabled;
+        working_.eq.push_back(b);
     };
 
-    working_.color.mix = add(working_.color.mix, (enhance - 0.65) * 18.0 + masari * 1.2, 0.0, 42.0);
-    working_.color.smart_bass = add(working_.color.smart_bass, (bass - working_.macro.smart_bass / 100.0) * 60.0, 0.0, 100.0);
-    working_.color.body = add(working_.color.body, (bass - 0.55) * 13.0 + (vocal - 0.65) * 5.5 + masari * 1.0, 0.0, 30.0);
-    working_.color.warmth = add(working_.color.warmth, (bass - 0.55) * 7.5 + (vocal - 0.65) * 4.2 + masari * 0.6, 0.0, 25.0);
-    working_.color.air = add(working_.color.air, (treble - working_.macro.smart_treble / 100.0) * 34.0 + masari * 2.2, -8.0, 70.0);
-    working_.color.god_particles = add(working_.color.god_particles, (treble - 0.70) * 22.0 + masari * 4.5, 0.0, 100.0);
-    working_.color.velvet_treble = add(working_.color.velvet_treble, treble > 0.62 ? (treble - 0.62) * 18.0 : 0.0, 0.0, 100.0);
-    working_.color.vocal_tickle = add(working_.color.vocal_tickle, (treble - 0.70) * 14.0 + (vocal - 0.65) * 16.0 + masari * 1.2, 0.0, 100.0);
-    working_.color.vocal_presence = add(working_.color.vocal_presence, (vocal - 0.65) * 34.0 + masari * 1.1, 0.0, 100.0);
-    working_.color.mid_projection = add(working_.color.mid_projection, (vocal - 0.65) * 36.0 + masari * 1.1, 0.0, 100.0);
-    working_.width.enabled = working_.width.enabled && stereo > 0.02;
-    working_.width.mix = add(working_.width.mix, (stereo - working_.macro.stereo_magic / 100.0) * 52.0 + masari * 1.8, 0.0, 100.0);
-    working_.width.width = add(working_.width.width, (stereo - 0.85) * 82.0 + masari * 2.8, 88.0, 220.0);
-    working_.width.mid_width = add(working_.width.mid_width, (stereo - 0.85) * 43.0 + masari * 1.2, 90.0, 165.0);
-    working_.width.high_width = add(working_.width.high_width, (stereo - 0.85) * 84.0 + masari * 2.2, 98.0, 224.0);
-    // Always give the user an audible ON benefit. The extension's trick is not
-    // distortion; it is smart compressor/makeup staging plus clean tonal lift.
-    const double perceived_benefit_db = 1.10 + enhance * 1.05 + std::max(0.0, vocal - 0.50) * 0.35 + std::max(0.0, treble - 0.55) * 0.25;
-    working_.output.output_gain_db = params_.output_trim_db + perceived_benefit_db;
-    working_.compressor.makeup_gain_db = clamp(working_.compressor.makeup_gain_db + 0.75 + enhance * 0.80, 0.0, 4.8);
-    working_.compressor.parallel_mix = clamp(working_.compressor.parallel_mix + enhance * 3.0, 72.0, 96.0);
+    const double enhance = exp01(ui_enhance / 100.0, 1.08);
+    const double bassBip   = bipolar(ui_bass,   1.30);
+    const double trebleBip = bipolar(ui_treble, 1.30);
+    const double vocalBip  = bipolar(ui_vocal,  1.16);
+    const double stereoBip = bipolar(ui_stereo, 1.18);
+
+    const double bassBoost    = std::max(0.0,  bassBip);
+    const double bassClean    = std::max(0.0, -bassBip);
+    const double trebleBoost  = std::max(0.0,  trebleBip);
+    const double trebleClean  = std::max(0.0, -trebleBip);
+    const double vocal        = std::max(0.0,  vocalBip);
+    const double vocalTuck    = std::max(0.0, -vocalBip);
+    const double stereoWide   = std::max(0.0,  stereoBip);
+    const double stereoNarrow = std::max(0.0, -stereoBip);
+    const double bassEndpoint = endpointLift(bassBoost);
+    const double trebleEndpoint = endpointLift(trebleBoost);
+    const double masari = clamp01(working_.macro.masari_feel / 100.0);
+
+    const double bassBoostActive = topologyActivation(bassBoost);
+    const double bassCleanActive = topologyActivation(bassClean);
+    const double trebleBoostActive = topologyActivation(trebleBoost);
+    const double trebleCleanActive = topologyActivation(trebleClean);
+    const double vocalActive = topologyActivation(vocal);
+    const double vocalTuckActive = topologyActivation(vocalTuck);
+
+    const double colorActivation = clamp01(enhance * 0.70 + vocal * 0.58 + vocalTuck * 0.28
+                                         + bassBoost * 0.34 + trebleBoost * 0.36
+                                         + bassClean * 0.12 + trebleClean * 0.22);
+    working_.color.enabled = colorActivation > 0.006 || bassClean > 0.015 || trebleClean > 0.015 || vocalTuck > 0.015;
+    working_.color.mix = clamp(20.0 * vocal + 31.0 * enhance + 8.0 * vocalTuck
+                             + 9.0 * bassBoost + 13.5 * trebleBoost + masari * 1.0,
+                             0.0, 54.0);
+
+    // Smart Bass: left cleans mud/rumble, right adds sub/body/punch. The low-cut
+    // lanes stay allocated at near-identity frequency when inactive so stage
+    // count remains stable during automation.
+    working_.color.smart_bass = clamp(100.0 * bassBoost, 0.0, 100.0);
+    working_.color.body = clamp(21.0 * bassBoost + 10.0 * bassEndpoint
+                              + 7.0 * vocal + 3.0 * enhance, 0.0, 46.0);
+    working_.color.warmth = clamp(13.0 * bassBoost + 6.2 * bassEndpoint
+                                + 5.3 * vocal + 2.0 * enhance, 0.0, 36.0);
+    working_.color.drive = clamp(0.10 + 1.18 * enhance + 1.10 * bassBoost
+                               + 0.25 * bassEndpoint + 0.42 * vocal, 0.0, 3.45);
+
+    addBand(EqType::LowShelf, 58.0 + 12.0 * bassBoost,
+            (0.35 + 4.95 * bassBoost + 1.90 * bassEndpoint) * bassBoostActive, 0.64);
+    addBand(EqType::Bell, 104.0 + 20.0 * bassBoost,
+            (0.18 + 3.10 * bassBoost + 1.15 * bassEndpoint) * bassBoostActive, 0.82);
+    addBand(EqType::Bell, 235.0 + 70.0 * bassBoost,
+            (0.10 + 1.55 * bassBoost + 0.45 * bassEndpoint) * bassBoostActive, 0.78);
+
+    const double lowCutTargetHz = 10.0 + 76.0 * bassClean;
+    const double lowCutSecondActive = topologyActivation(clamp01((bassClean - 0.55) / 0.10));
+    addBand(EqType::LowCut, lowCutTargetHz, 0.0, 0.70710678, 12, true);
+    addBand(EqType::LowCut, lowCutTargetHz, 0.0, 1.30656296, 12, bassCleanActive * lowCutSecondActive > 0.001);
+    addBand(EqType::Bell, 185.0 + 95.0 * bassClean,
+            (-0.45 - 4.95 * bassClean) * bassCleanActive, 0.82);
+    addBand(EqType::Bell, 380.0 + 160.0 * bassClean,
+            (-0.12 - 2.45 * bassClean) * bassCleanActive, 0.95);
+
+    // Smart Treble: left smooths harshness/sibilance, right opens air/presence.
+    working_.color.air = clamp(112.0 * trebleBoost + 28.0 * trebleEndpoint
+                             - 13.0 * trebleClean, -14.0, 140.0);
+    working_.color.god_particles = clamp(100.0 * trebleBoost + 12.0 * enhance, 0.0, 100.0);
+    working_.color.vocal_tickle = clamp(32.0 * trebleBoost + 14.0 * trebleEndpoint
+                                      + 56.0 * vocal + 8.0 * enhance, 0.0, 114.0);
+    working_.color.velvet_treble = clamp(18.0 + 82.0 * trebleClean + 18.0 * trebleBoost, 0.0, 100.0);
+    working_.color.ai_high_repair = clamp(18.0 + 78.0 * trebleClean, 0.0, 100.0);
+    addBand(EqType::HighShelf, 8400.0 + 2600.0 * trebleBoost,
+            (0.48 + 7.10 * trebleBoost + 2.10 * trebleEndpoint) * trebleBoostActive, 0.56);
+    addBand(EqType::Bell, 3100.0 + 600.0 * trebleBoost,
+            (0.16 + 2.65 * trebleBoost + 1.10 * trebleEndpoint) * trebleBoostActive, 0.90);
+    addBand(EqType::Bell, 5600.0 + 1700.0 * trebleClean,
+            (-0.75 - 5.60 * trebleClean) * trebleCleanActive, 1.45);
+    addBand(EqType::Bell, 9200.0,
+            (-0.30 - 2.85 * trebleClean) * trebleCleanActive, 0.78);
+
+    // Vocal: left tucks/smooths, right moves vocal/lead forward with body and clarity.
+    working_.color.vocal_presence = clamp(100.0 * vocal + 8.0 * enhance, 0.0, 100.0);
+    working_.color.mid_projection = clamp(100.0 * vocal + 14.0 * enhance, 0.0, 100.0);
+    working_.color.stereo_mid = clamp(50.0 + 45.0 * vocal - 24.0 * vocalTuck, 0.0, 100.0);
+    addBand(EqType::Bell, 1450.0 + 380.0 * vocal,
+            (0.40 + 4.80 * vocal) * vocalActive, 0.80);
+    addBand(EqType::Bell, 310.0,
+            (-0.04 - 0.46 * vocal) * vocalActive, 1.06);
+    addBand(EqType::Bell, 520.0,
+            (0.16 + 1.85 * vocal) * vocalActive, 0.74);
+    addBand(EqType::Bell, 3350.0,
+            (0.20 + 3.25 * vocal) * vocalActive, 1.00);
+    addBand(EqType::Bell, 5200.0,
+            (0.08 + 1.45 * vocal) * vocalActive, 1.18);
+    addBand(EqType::Bell, 1650.0,
+            (-0.40 - 3.80 * vocalTuck) * vocalTuckActive, 0.90);
+    addBand(EqType::Bell, 3300.0,
+            (-0.24 - 2.35 * vocalTuck) * vocalTuckActive, 1.12);
+    addBand(EqType::Bell, 520.0,
+            (-0.08 - 0.95 * vocalTuck) * vocalTuckActive, 0.82);
+
+    // Enhance: additive polish/density, still low-distortion and CPU-safe.
+    working_.color.harmonics = clamp(72.0 * enhance + 14.0 * trebleBoost, 0.0, 100.0);
+    working_.color.mix = clamp(working_.color.mix + enhance * (4.0 + masari * 2.0), 0.0, 54.0);
+    working_.compressor.enabled = enhance > 0.006 || vocal > 0.006;
+    working_.compressor.threshold_db = clamp(-15.5 - 4.0 * enhance - 2.2 * vocal, -24.0, -11.5);
+    working_.compressor.ratio = clamp(1.04 + enhance * 0.34 + vocal * 0.40, 1.0, 1.80);
+    working_.compressor.attack_sec = clamp(0.046 - 0.015 * vocal + 0.006 * (1.0 - enhance), 0.018, 0.064);
+    working_.compressor.release_sec = clamp(0.145 + 0.040 * enhance + 0.035 * vocal, 0.100, 0.260);
+    working_.compressor.parallel_mix = clamp(40.0 * enhance + 24.0 * vocal, 0.0, 66.0);
+    working_.compressor.makeup_gain_db = clamp(0.25 + 1.35 * enhance + 1.45 * vocal, 0.0, 4.2);
+
+    // Stable no-pumping guard. Stronger knobs should be obvious, but the main mix
+    // must not breathe after bass hits, so full-band compression remains moderate.
+    working_.compressor.ratio = std::min(working_.compressor.ratio, 1.52);
+    working_.compressor.parallel_mix = std::min(working_.compressor.parallel_mix, 48.0);
+    working_.compressor.makeup_gain_db = std::min(working_.compressor.makeup_gain_db, 2.8);
+    working_.compressor.release_sec = std::max(working_.compressor.release_sec, 0.120);
+
+    // Stereo: left narrows down to mono, 50 = raw, right widens/open side air.
+    working_.width.enabled = std::abs(stereoBip) > 0.006;
+    if (stereoNarrow > 0.006) {
+        const double monoScale = 100.0 * (1.0 - stereoNarrow);
+        working_.width.mix = 100.0;
+        working_.width.width = monoScale;
+        working_.width.low_mid_width = monoScale;
+        working_.width.mid_width = monoScale;
+        working_.width.high_width = monoScale;
+        working_.width.source_protect = 100.0;
+        working_.width.side_tone = 0.0;
+    } else if (stereoWide > 0.006) {
+        const double contextCap = 200.0;
+        working_.width.mix = clamp(30.0 + 68.0 * stereoWide, 0.0, 100.0);
+        working_.width.width = clamp(100.0 + 100.0 * stereoWide, 100.0, contextCap);
+        working_.width.low_mid_width = clamp(100.0 + 22.0 * stereoWide, 100.0, 135.0);
+        working_.width.mid_width = clamp(100.0 + 50.0 * stereoWide, 100.0, 168.0);
+        working_.width.high_width = clamp(100.0 + 116.0 * stereoWide, 100.0, 224.0);
+        working_.width.source_protect = clamp(78.0 - 12.0 * stereoWide, 58.0, 96.0);
+        working_.width.side_tone = clamp(0.6 + 3.8 * stereoWide, 0.0, 5.0);
+    }
+
+    // Perceived loudness benefit without making sectoral knobs a hidden volume control.
+    const double perceived_benefit_db = enhance * 1.20 + vocal * 0.70
+                                      + trebleBoost * 0.20 + bassBoost * 0.10
+                                      - vocalTuck * 0.10;
+    working_.output.output_gain_db = params_.output_trim_db + perceived_benefit_db - 1.20;
     working_.output.bypass = params_.bypass;
     working_.output.punch_protect = params_.smart_protect;
 
-    // Headroom compensation: Smart Bass and Smart Treble are musical macros, not simple boosts.
-    const double headroom = std::max(0.0, bass - 0.86) * 0.25 + std::max(0.0, treble - 0.90) * 0.08 + std::max(0.0, enhance - 0.88) * 0.12;
+    const double headroom = bassBoost * 3.05 + trebleBoost * 0.30 + enhance * 0.16 + vocal * 0.10;
     if (params_.smart_protect) {
-        working_.output.output_gain_db -= headroom;
-        working_.output.limiter_ceiling_db = std::min(working_.output.limiter_ceiling_db, -1.0 - std::max(0.0, bass - 0.78) * 0.7);
-        working_.output.limiter_drive = clamp(working_.output.limiter_drive + std::max(0.0, bass - 0.80) * 0.035 + masari * 0.010, 0.0, 0.90);
+        working_.output.output_gain_db -= std::max(0.0, headroom - 0.22);
+        working_.output.limiter_enabled = true;
+        working_.output.limiter_ceiling_db = std::min(working_.output.limiter_ceiling_db, -1.15 - bassBoost * 0.75);
+        working_.output.limiter_drive = clamp(working_.output.limiter_drive + bassBoost * 0.040 + enhance * 0.026, 0.0, 0.92);
     }
 }
 
@@ -656,7 +803,8 @@ std::pair<float,float> ArSonKuPikEngine::process_width(float l, float r)
     const double gen_mid_gain = additive_gain(w.mid_width, 0.022, 0.008, 0.035) * (1.0 - vocal_prob * 0.86) * (1.0 - pan_event * 0.70) * corr_guard;
     const double gen_air_gain = additive_gain(w.high_width, 0.052, 0.020, 0.075) * (1.0 - vocal_prob * 0.42) * (1.0 - anti_phase * 0.66);
 
-    double side_out = side;
+    const double base_side_gain = w.width < 100.0 ? clamp(w.width / 100.0, 0.0, 1.0) : 1.0;
+    double side_out = side * base_side_gain;
     side_out -= static_cast<double>(side_sub) * low_reduce;
     side_out += static_cast<double>(side_body) * body_gain;
     side_out += static_cast<double>(side_mid) * mid_gain;

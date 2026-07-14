@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.11] - 2026-07-14
+### Changed
+- Ported the stronger askp-vst style macro-to-micro mapping into the OBS engine.
+- Smart Bass, Smart Treble, Vocal Body, and Stereo Magic now use center-based bipolar controls so min/max movement is clearly audible.
+- Added fixed macro EQ lanes for bass, treble, vocal, cleanup, and tuck behavior while preserving crackle-safe stateful EQ retuning.
+- Added true stereo narrowing support so the Stereo Magic knob can move from mono/narrow through neutral to wide.
+- Kept the v0.4.10 CPU-safe smoothing and stable no-pumping compressor/makeup guard.
+
 ## [0.4.10] - 2026-07-08
 ### Fixed
 - Tightened the crackle-free parameter patch after audit.
