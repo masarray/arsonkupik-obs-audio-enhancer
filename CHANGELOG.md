@@ -3,6 +3,11 @@
 All notable changes to this project are documented here.
 
 ## [0.4.13] - 2026-07-15
+### Changed
+- Strengthened the macro response curves at moderate factory-preset values so restrained presets sound more clearly enhanced without changing the neutral point or the 0/100 endpoints.
+- Added fixed per-preset wow calibration so every factory preset delivers an immediate, source-independent loudness lift without restoring the removed dynamic full-band makeup AGC.
+- Expanded the preset smoke test to measure both RMS and peak benefit and fail when any factory preset falls outside the calibrated wow window.
+
 ### Fixed
 - Replaced UI/audio shared `RuntimeParams` and string access with a bounded seqlock-style atomic POD snapshot.
 - Moved all DSP engine preparation, parameter application, and preset mutation to the OBS audio callback.
