@@ -8,6 +8,30 @@ namespace arsonkupik {
 namespace {
 constexpr double kInternalChainHeadroomDb = -8.0;
 constexpr double kInternalRestoreDb = 4.9;
+
+// Fixed, source-independent calibration. The values follow factory_presets()
+// order and keep each preset's default perceived ON/bypass benefit near 3 dB
+// RMS without reintroducing a dynamic makeup AGC or pumping-prone gain loop.
+constexpr std::array<double, 12> kPresetWowTrimDb = {
+    1.05,  // MasAri
+    3.60,  // Mastering Global
+    2.35,  // Max Enhancer
+    0.42,  // SonKuHoreg
+   -0.48,  // SonKuBattle
+    0.06,  // SonKuBalap
+    4.40,  // Audiophile
+    1.95,  // Punchy Music
+    3.45,  // Open Air
+    5.58,  // Movie Sub
+    4.60,  // Podcast
+    8.92   // Night Listening
+};
+
+double preset_wow_trim_db(std::size_t preset_index)
+{
+    return preset_index < kPresetWowTrimDb.size() ? kPresetWowTrimDb[preset_index] : 0.0;
+}
+
 struct QTableView { const double* values = nullptr; std::size_t count = 0; };
 QTableView butterworth_q_values(int slope)
 {
@@ -57,11 +81,13 @@ void ArSonKuPikEngine::apply_macros()
         working_.eq.push_back(b);
     };
 
-    const double enhance = exp01(ui_enhance / 100.0, 1.08);
-    const double bassBip = bipolar(ui_bass, 1.30);
-    const double trebleBip = bipolar(ui_treble, 1.30);
-    const double vocalBip = bipolar(ui_vocal, 1.16);
-    const double stereoBip = bipolar(ui_stereo, 1.18);
+    // Slightly lower curves make moderate factory-preset values more audible
+    // while preserving the same neutral point and exact 0/100 endpoints.
+    const double enhance = exp01(ui_enhance / 100.0, 0.92);
+    const double bassBip = bipolar(ui_bass, 1.18);
+    const double trebleBip = bipolar(ui_treble, 1.18);
+    const double vocalBip = bipolar(ui_vocal, 1.08);
+    const double stereoBip = bipolar(ui_stereo, 1.10);
     const double bassBoost = std::max(0.0, bassBip);
     const double bassClean = std::max(0.0, -bassBip);
     const double trebleBoost = std::max(0.0, trebleBip);
@@ -170,7 +196,10 @@ void ArSonKuPikEngine::apply_macros()
     const double perceived_benefit_db = enhance * 0.72 + vocal * 0.38
                                       + trebleBoost * 0.10 + bassBoost * 0.06
                                       - vocalTuck * 0.08;
-    working_.output.output_gain_db = params_.output_trim_db + perceived_benefit_db - 1.00;
+    working_.output.output_gain_db = params_.output_trim_db
+                                   + perceived_benefit_db
+                                   + preset_wow_trim_db(params_.preset_index)
+                                   - 1.00;
     working_.output.bypass = params_.bypass;
     working_.output.punch_protect = params_.smart_protect;
 

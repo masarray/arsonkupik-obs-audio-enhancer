@@ -39,7 +39,7 @@ jobs:
         run: cmake -S . -B build-test -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
       - name: Build
         run: cmake --build build-test --config Release
-      - name: Run preset smoke test
+      - name: Run preset loudness and clipping gate
         run: ./build-test/arsonkupik_dsp_smoke
       - name: Run realtime hardening test
         run: ./build-test/arsonkupik_dsp_hardening
