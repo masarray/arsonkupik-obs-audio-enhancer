@@ -4,12 +4,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace arsonkupik {
 
 constexpr double kDefaultSampleRate = 48000.0;
 constexpr int kMaxChannels = 8;
+constexpr std::size_t kMaxEqStages = 96;
 
 double db_to_gain(double db);
 double gain_to_db(double gain);
@@ -120,8 +122,38 @@ const std::vector<Preset>& factory_presets();
 const Preset* find_preset(const std::string& id);
 const Preset& default_preset();
 
+inline std::size_t preset_index_from_id(const std::string& id)
+{
+    const auto& presets = factory_presets();
+    for (std::size_t i = 0; i < presets.size(); ++i) {
+        if (presets[i].id == id) return i;
+    }
+    return 0U;
+}
+
+inline const Preset& preset_at_index(std::size_t index)
+{
+    const auto& presets = factory_presets();
+    return presets[index < presets.size() ? index : 0U];
+}
+
+// Public convenience structure used by tests and non-realtime callers.
 struct RuntimeParams {
     std::string preset_id = "default";
+    double enhance = 65.0;
+    double smart_bass = 55.0;
+    double smart_treble = 70.0;
+    double vocal_body = 65.0;
+    double stereo_magic = 85.0;
+    double output_trim_db = -0.55;
+    bool smart_protect = true;
+    bool bypass = false;
+    bool advanced_override = false;
+};
+
+// Allocation-free POD parameter block for the OBS audio thread.
+struct EngineParams {
+    std::uint32_t preset_index = 0;
     double enhance = 65.0;
     double smart_bass = 55.0;
     double smart_treble = 70.0;
@@ -150,6 +182,7 @@ public:
     void prepare(double sample_rate, double seconds, double initial = 0.0);
     double process(double target);
     void reset(double value = 0.0);
+    double value() const { return state_; }
 private:
     double alpha_ = 0.001;
     double state_ = 0.0;
@@ -171,10 +204,19 @@ public:
     std::pair<float,float> process(float l, float r);
     double gain_reduction_db() const { return last_gr_db_; }
 private:
+    void update_coefficients();
+
     double sample_rate_ = kDefaultSampleRate;
     CompressorConfig cfg_{};
     double env_ = 0.0;
     double last_gr_db_ = 0.0;
+    double attack_coeff_ = 0.0;
+    double release_coeff_ = 0.0;
+    double dry_mix_ = 0.0;
+    double wet_mix_ = 1.0;
+    double wet_gain_current_ = 1.0;
+    double wet_gain_step_ = 0.0;
+    std::uint32_t control_countdown_ = 0;
 };
 
 class LimiterProcessor {
@@ -185,10 +227,16 @@ public:
     std::pair<float,float> process(float l, float r);
     double gain_reduction_db() const { return last_gr_db_; }
 private:
+    void update_coefficients();
+
     double sample_rate_ = kDefaultSampleRate;
     OutputConfig cfg_{};
-    double env_ = 0.0;
+    double gain_ = 1.0;
+    double release_coeff_ = 0.0;
+    double drive_gain_ = 1.0;
+    double ceiling_gain_ = 1.0;
     double last_gr_db_ = 0.0;
+    std::uint32_t meter_countdown_ = 0;
 };
 
 class ArSonKuPikEngine {
@@ -196,31 +244,37 @@ public:
     ArSonKuPikEngine();
     void prepare(double sample_rate, std::size_t channels);
     void set_runtime_params(const RuntimeParams& params);
+    void set_realtime_params(const EngineParams& params);
     void reset();
     void process(float** planes, std::size_t channels, std::size_t frames);
     const MeterState& meters() const { return meters_; }
-    const Preset& current_preset() const { return preset_; }
+    const Preset& current_preset() const { return *preset_; }
 
 private:
+    void load_working_from_preset();
     void rebuild_from_preset();
     void rebuild_eq();
     void rebuild_color_filters();
     void rebuild_width_filters();
     void apply_macros();
+    void update_cached_gains();
     std::pair<float,float> process_color(float l, float r);
     std::pair<float,float> process_width(float l, float r);
     float soft_saturate(float x, double drive) const;
     float process_channel_eq(std::size_t ch, float x);
-    void update_meters(double in_l, double in_r, double out_l, double out_r, double gr_db);
+    void update_meters_block(double in_peak, double out_peak, double gr_db,
+                             double corr_lr, double corr_l2, double corr_r2,
+                             std::size_t frames);
 
     double sample_rate_ = kDefaultSampleRate;
     std::size_t channels_ = 2;
-    RuntimeParams params_{};
-    Preset preset_;
+    EngineParams params_{};
+    const Preset* preset_ = nullptr;
     Preset working_;
     MeterState meters_{};
 
-    std::vector<std::array<Biquad, kMaxChannels>> eq_filters_;
+    std::array<std::array<Biquad, kMaxChannels>, kMaxEqStages> eq_filters_{};
+    std::size_t eq_stage_count_ = 0;
 
     // Color / psychoacoustic filters. Stereo paths use indexes 0=L, 1=R.
     std::array<Biquad,2> bass_pre_;
@@ -248,8 +302,6 @@ private:
     Biquad width_air_tone_;
 
     // Smart Multiband M/S Imager v2: real-side analysis/enhancement.
-    // These filters process the existing Side signal, so musical stereo
-    // instruments are preserved while risky low anti-phase energy is reduced.
     Biquad width_side_sub_hp_;
     Biquad width_side_sub_lp_;
     Biquad width_side_body_hp_;
@@ -263,23 +315,39 @@ private:
 
     DynamicsProcessor compressor_;
     LimiterProcessor limiter_;
-
     OnePoleSmoother bypass_smooth_;
-    OnePoleSmoother meter_smooth_;
 
-    // Slow detectors used by Smart Stereo Integrity Engine.
+    // Control-rate stereo analysis with true energy correlation.
+    static constexpr std::uint32_t kWidthControlInterval = 16;
+    std::uint32_t width_control_count_ = 0;
+    double width_mid_acc_ = 0.0;
+    double width_side_acc_ = 0.0;
+    double width_lr_acc_ = 0.0;
+    double width_l2_acc_ = 0.0;
+    double width_r2_acc_ = 0.0;
     double width_mid_env_ = 1.0e-6;
     double width_side_env_ = 1.0e-6;
     double width_side_fast_env_ = 1.0e-6;
     double width_side_slow_env_ = 1.0e-6;
+    double width_corr_lr_env_ = 1.0e-6;
+    double width_corr_l2_env_ = 1.0e-6;
+    double width_corr_r2_env_ = 1.0e-6;
     double width_corr_env_ = 1.0;
+    double width_slow_alpha_ = 0.0;
+    double width_fast_alpha_ = 0.0;
+    double width_corr_alpha_ = 0.0;
 
-    // Extension-style smart gain staging: reserve headroom only when source is
-    // hot, then restore perceived loudness with clean makeup before the limiter.
-    double smart_input_peak_env_ = 1.0e-6;
-    double smart_prelim_peak_env_ = 1.0e-6;
-    double smart_headroom_db_ = 0.0;
-    double smart_makeup_db_ = 0.0;
+    // Cached linear gains; recalculated only when parameters change.
+    double cached_input_gain_ = 1.0;
+    double cached_output_gain_ = 1.0;
+
+    // Block-rate metering state.
+    double meter_input_env_ = 1.0e-12;
+    double meter_output_env_ = 1.0e-12;
+    double meter_gr_env_ = 0.0;
+    double meter_corr_lr_env_ = 1.0e-6;
+    double meter_corr_l2_env_ = 1.0e-6;
+    double meter_corr_r2_env_ = 1.0e-6;
 };
 
 } // namespace arsonkupik
