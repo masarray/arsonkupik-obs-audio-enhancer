@@ -15,6 +15,17 @@ double peak_db(const std::vector<float>& l, const std::vector<float>& r)
     }
     return arsonkupik::gain_to_db(p + 1.0e-12);
 }
+
+double rms_db(const std::vector<float>& l, const std::vector<float>& r)
+{
+    double sum = 0.0;
+    for (std::size_t i = 0; i < l.size(); ++i) {
+        sum += static_cast<double>(l[i]) * l[i];
+        sum += static_cast<double>(r[i]) * r[i];
+    }
+    const double mean = sum / std::max<std::size_t>(1, l.size() * 2U);
+    return arsonkupik::gain_to_db(std::sqrt(mean) + 1.0e-12);
+}
 }
 
 int main()
@@ -37,8 +48,9 @@ int main()
                                        + 0.018 * std::sin(2.0 * kPi * 2600.0 * t));
     }
     const double input_peak = peak_db(source_left, source_right);
+    const double input_rms = rms_db(source_left, source_right);
     bool failed = false;
-    std::cout << "calibration_target_db=3.5 target_window_db=[3.0,4.0]\n";
+    std::cout << "calibration_target_db=3.5 peak_window_db=[3.0,4.1]\n";
     for (const auto& preset : factory_presets()) {
         std::vector<float> left = source_left;
         std::vector<float> right = source_right;
@@ -62,19 +74,23 @@ int main()
         engine.process(planes, 2, frames);
         const auto& m = engine.meters();
         const double out_peak = peak_db(left, right);
-        const double benefit = out_peak - input_peak;
+        const double out_rms = rms_db(left, right);
+        const double peak_benefit = out_peak - input_peak;
+        const double rms_benefit = out_rms - input_rms;
         std::cout << preset.name
                   << " input_peak_db=" << input_peak
                   << " output_peak_db=" << out_peak
-                  << " benefit_db=" << benefit
+                  << " peak_benefit_db=" << peak_benefit
+                  << " input_rms_db=" << input_rms
+                  << " output_rms_db=" << out_rms
+                  << " rms_benefit_db=" << rms_benefit
                   << " meter_gr_db=" << m.gain_reduction_db
                   << " corr=" << m.correlation
                   << " clipping=" << (m.clipping ? "yes" : "no")
                   << "\n";
-        const bool defaultLevelOutsideTarget = preset.id == "default" && (benefit < 2.0 || benefit > 4.5);
-        const bool extremeHiddenVolumeBoost = benefit > 5.0;
-        if (!std::isfinite(out_peak) || out_peak > -0.20 || m.clipping
-            || defaultLevelOutsideTarget || extremeHiddenVolumeBoost) {
+        const bool presetOutsideWowWindow = peak_benefit < 3.0 || peak_benefit > 4.1;
+        if (!std::isfinite(out_peak) || !std::isfinite(out_rms)
+            || out_peak > -0.20 || m.clipping || presetOutsideWowWindow) {
             failed = true;
         }
     }
