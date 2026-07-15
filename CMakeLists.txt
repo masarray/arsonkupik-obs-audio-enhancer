@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(arsonkupik-obs-audio-enhancer VERSION 0.4.12 LANGUAGES CXX)
+project(arsonkupik-obs-audio-enhancer VERSION 0.4.13 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -71,4 +71,7 @@ endif()
 if (BUILD_STANDALONE_TESTS)
     add_executable(arsonkupik_dsp_smoke tests/dsp_smoke_test.cpp)
     target_link_libraries(arsonkupik_dsp_smoke PRIVATE arsonkupik_dsp)
+
+    add_executable(arsonkupik_dsp_hardening tests/dsp_hardening_test.cpp)
+    target_link_libraries(arsonkupik_dsp_hardening PRIVATE arsonkupik_dsp)
 endif()
