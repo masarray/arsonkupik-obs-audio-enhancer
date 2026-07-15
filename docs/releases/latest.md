@@ -1,18 +1,17 @@
-# ArSonKuPik OBS Audio Enhancer v0.4.13
+# ArSonKuPik OBS Audio Enhancer v0.4.14
 
 ## Highlights
-- Hardens the real-time OBS engine for crackle-free parameter changes, lower CPU cost, and stable dynamics.
-- Removes UI/audio data races through a lock-free POD parameter snapshot.
-- Replaces preset fade-to-silence with a normalized dual-engine crossfade.
-- Calibrates every factory preset for an immediate audible ON/bypass benefit instead of allowing restrained presets to sound almost unchanged or quieter than raw audio.
+- Delivers a consistent immediate ON/bypass wow effect across every factory preset.
+- Preserves the v0.4.13 real-time hardening for crackle-free parameter changes, lower CPU cost, and stable dynamics.
+- Uses a fixed per-preset calibration instead of a moving loudness AGC, so the level benefit does not chase the source or recreate pumping.
 
 ## Preset wow calibration
 - Moderate macro values now use slightly stronger response curves, so Mastering, Audiophile, Movie, Podcast, Night Listening, and other restrained presets sound more clearly processed while preserving their own tonal identity.
-- Every factory preset receives a fixed source-independent calibration trim. This is not an AGC: the value does not chase the source level and therefore does not recreate the pumping-prone smart-makeup loop removed during hardening.
-- The maintained smoke signal now measures both RMS and peak benefit for every preset.
+- Every factory preset receives a fixed source-independent calibration trim.
+- The maintained smoke signal measures both RMS and peak benefit for every preset.
 - Required factory-preset window: approximately **+3 dB RMS**, with transient peak benefit guarded below **+4.7 dB** and no clipping.
 
-## Real-time architecture
+## Real-time architecture retained from v0.4.13
 - UI updates publish only atomic numeric values and flags. Preset names and `std::string` values never cross into shared audio-thread state.
 - DSP engines are prepared and mutated only by the OBS audio callback.
 - Preset changes are prepared in a second engine and crossfaded for 10 ms; no remainder of the OBS block is muted.
@@ -56,4 +55,4 @@ No preset clipped in this calibration run.
 - AddressSanitizer and UndefinedBehaviorSanitizer standalone tests: passed.
 
 ## Listening boundary
-The numeric gates prevent quiet-preset regressions, extreme hidden boosts, clipping, allocation regressions, and known hardening failures. Final release approval still requires listening in native OBS with real music, voice, bass-heavy material, rapid knob movement, repeated preset switching, and several plugin instances.
+The numeric gates prevent quiet-preset regressions, extreme hidden boosts, clipping, allocation regressions, and known hardening failures. Final approval also includes listening in native OBS with music, voice, bass-heavy material, rapid knob movement, repeated preset switching, and several plugin instances.
