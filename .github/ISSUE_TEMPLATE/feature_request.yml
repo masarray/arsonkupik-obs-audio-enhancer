@@ -1,17 +1,75 @@
 name: Feature request
-description: Suggest an improvement
-title: "[Feature] "
-labels: [enhancement]
+description: Propose a focused improvement to the plugin, workflow, packaging, documentation, or public project.
+title: "[Feature]: "
+labels:
+  - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the user problem first. Focused proposals with a clear listening or workflow benefit are easier to evaluate.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Audio engine / DSP
+        - Presets and macro behavior
+        - OBS interface
+        - Windows installation
+        - Linux packaging
+        - Build and CI
+        - Documentation
+        - Landing page / public repository
+        - Other
+    validations:
+      required: true
+
   - type: textarea
     id: problem
     attributes:
       label: Problem to solve
+      description: What user problem, limitation, or repeated friction does this address?
+      placeholder: Describe the problem without assuming a particular implementation.
     validations:
       required: true
+
   - type: textarea
     id: proposal
     attributes:
       label: Proposed solution
+      description: Explain the desired behavior and how a user would interact with it.
     validations:
       required: true
+
+  - type: textarea
+    id: audible_goal
+    attributes:
+      label: Listening goal or measurable benefit
+      description: Required for DSP or preset proposals. Explain what should become audibly better and what must not regress.
+      placeholder: Example: stronger min/max knob contrast without crackle, pumping, clipping, or a hidden volume jump.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Mention workarounds or simpler approaches that were considered.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add mockups, references, example workflows, or links that clarify the proposal.
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Project constraints
+      options:
+        - label: The proposal preserves a simple user-facing workflow.
+          required: true
+        - label: The proposal does not depend on extreme hidden loudness, obvious distortion, or mandatory high CPU use.
+          required: true
+        - label: I searched existing issues for a similar request.
+          required: true
