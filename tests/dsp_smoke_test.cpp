@@ -50,7 +50,7 @@ int main()
     const double input_peak = peak_db(source_left, source_right);
     const double input_rms = rms_db(source_left, source_right);
     bool failed = false;
-    std::cout << "calibration_target_db=3.5 peak_window_db=[3.0,4.1]\n";
+    std::cout << "factory_wow_rms_window_db=[2.95,3.50] peak_guard_db=[3.50,4.70]\n";
     for (const auto& preset : factory_presets()) {
         std::vector<float> left = source_left;
         std::vector<float> right = source_right;
@@ -88,9 +88,11 @@ int main()
                   << " corr=" << m.correlation
                   << " clipping=" << (m.clipping ? "yes" : "no")
                   << "\n";
-        const bool presetOutsideWowWindow = peak_benefit < 3.0 || peak_benefit > 4.1;
+        const bool rmsOutsideWowWindow = rms_benefit < 2.95 || rms_benefit > 3.50;
+        const bool peakOutsideGuard = peak_benefit < 3.50 || peak_benefit > 4.70;
         if (!std::isfinite(out_peak) || !std::isfinite(out_rms)
-            || out_peak > -0.20 || m.clipping || presetOutsideWowWindow) {
+            || out_peak > -0.20 || m.clipping
+            || rmsOutsideWowWindow || peakOutsideGuard) {
             failed = true;
         }
     }
