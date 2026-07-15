@@ -5,9 +5,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Linux release builds link the static DSP library into the OBS module (.so).
-# The DSP target must therefore be position-independent, otherwise ld fails with
-# "recompile with -fPIC" when creating arsonkupik-obs-audio-enhancer.so.
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(BUILD_OBS_PLUGIN "Build native OBS plugin target" ON)
@@ -15,6 +12,8 @@ option(BUILD_STANDALONE_TESTS "Build standalone DSP smoke tests" ON)
 
 add_library(arsonkupik_dsp STATIC
     src/arsonkupik_dsp.cpp
+    src/arsonkupik_dsp_macros.cpp
+    src/arsonkupik_dsp_processing.cpp
     src/arsonkupik_presets.cpp
 )
 target_include_directories(arsonkupik_dsp PUBLIC include)
