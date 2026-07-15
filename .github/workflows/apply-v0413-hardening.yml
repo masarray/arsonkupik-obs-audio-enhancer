@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/patches/v0.4.13-hardening.patch.gz.b64'
+      - '.github/patches/v0.4.13-hardening.patch.gz.b64.part04'
 
 permissions:
   contents: write
@@ -21,15 +21,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PATCH_B64=".github/patches/v0.4.13-hardening.patch.gz.b64"
-          if [[ ! -f "$PATCH_B64" ]]; then
-            echo "Patch file already consumed."
-            exit 0
-          fi
-          base64 --decode "$PATCH_B64" | gzip -dc > /tmp/v0413.patch
+          PATCH_PREFIX=".github/patches/v0.4.13-hardening.patch.gz.b64.part"
+          for suffix in 01 02 03 04; do
+            test -f "${PATCH_PREFIX}${suffix}"
+          done
+          cat "${PATCH_PREFIX}"{01,02,03,04} | base64 --decode | gzip -dc > /tmp/v0413.patch
           git apply --check /tmp/v0413.patch
           git apply /tmp/v0413.patch
-          rm "$PATCH_B64"
+          rm -f .github/patches/v0.4.13-hardening.patch.gz.b64
+          rm -f "${PATCH_PREFIX}"{01,02,03,04}
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
