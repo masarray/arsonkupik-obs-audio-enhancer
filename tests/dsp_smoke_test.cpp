@@ -38,6 +38,7 @@ int main()
     }
     const double input_peak = peak_db(source_left, source_right);
     bool failed = false;
+    std::cout << "calibration_target_db=3.5 target_window_db=[3.0,4.0]\n";
     for (const auto& preset : factory_presets()) {
         std::vector<float> left = source_left;
         std::vector<float> right = source_right;
