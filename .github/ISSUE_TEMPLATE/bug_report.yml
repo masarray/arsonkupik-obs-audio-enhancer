@@ -1,34 +1,109 @@
 name: Bug report
-description: Report a reproducible bug
-title: "[Bug] "
-labels: [bug]
+description: Report a reproducible installation, build, UI, crash, or functional problem.
+title: "[Bug]: "
+labels:
+  - bug
 body:
-  - type: textarea
-    id: summary
+  - type: markdown
     attributes:
-      label: Summary
-      description: What happened?
+      value: |
+        Thanks for helping improve ArSonKuPik. Please provide enough detail for another person to reproduce the problem.
+
+  - type: input
+    id: plugin_version
+    attributes:
+      label: ArSonKuPik version
+      description: Use the release tag shown on the downloaded package, for example v0.4.12.
+      placeholder: vX.Y.Z
     validations:
       required: true
+
   - type: input
-    id: version
+    id: obs_version
     attributes:
-      label: Plugin version
-  - type: input
-    id: obs
-    attributes:
-      label: OBS version
+      label: OBS Studio version
+      placeholder: Example: 31.0.3
+    validations:
+      required: true
+
   - type: dropdown
-    id: os
+    id: operating_system
     attributes:
       label: Operating system
       options:
-        - Windows
+        - Windows 11
+        - Windows 10
         - Linux
         - Other
-  - type: textarea
-    id: steps
-    attributes:
-      label: Steps to reproduce
     validations:
       required: true
+
+  - type: dropdown
+    id: installation_method
+    attributes:
+      label: Installation method
+      options:
+        - Windows installer
+        - Windows portable ZIP
+        - Linux archive
+        - Local source build
+        - GitHub Actions artifact
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem description
+      description: Explain what failed and where it happened.
+      placeholder: Describe the observed behavior clearly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Use a numbered sequence that starts from a clean OBS launch when possible.
+      placeholder: |
+        1. Open OBS Studio
+        2. Add the filter to ...
+        3. Change ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: OBS log and relevant output
+      description: Attach or paste the OBS log, installer log, build output, or crash details. Remove private information first.
+      render: text
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Add screenshots, source type, sample rate, scene details, or anything else that may help.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I tested with the latest public release or current main branch.
+          required: true
+        - label: I restarted OBS after installing or replacing the plugin.
+          required: true
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I did not include passwords, tokens, private paths, or other sensitive data.
+          required: true
