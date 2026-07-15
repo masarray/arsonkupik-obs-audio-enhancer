@@ -3,16 +3,114 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ArSonKuPik OBS Audio Enhancer</title>
-  <meta name="description" content="Professional smart audio enhancement plugin for OBS Studio. Louder perception, clearer playback, polished sound, and simple installation.">
+  <title>ArSonKuPik OBS Audio Enhancer — Smart, Crackle-Free Audio Filter</title>
+  <meta name="description" content="Free and open-source smart audio enhancement plugin for OBS Studio. Get polished sound, audible macro controls, stable gain, crackle-free adjustment, and practical CPU use on Windows and Linux.">
+  <meta name="keywords" content="OBS audio enhancer, OBS Studio plugin, OBS audio filter, smart audio enhancement, crackle free audio plugin, podcast audio OBS, music enhancer OBS, stereo enhancer OBS">
+  <meta name="author" content="masarray">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="theme-color" content="#0d1220">
+  <link rel="canonical" href="https://masarray.github.io/arsonkupik-obs-audio-enhancer/">
+  <link rel="preload" as="image" href="assets/images/og-hero.webp" type="image/webp">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ArSonKuPik OBS Audio Enhancer">
+  <meta property="og:title" content="ArSonKuPik OBS Audio Enhancer">
+  <meta property="og:description" content="Smart, crackle-free audio enhancement for OBS Studio with audible macro controls, calibrated loudness, stable dynamics, and practical CPU use.">
+  <meta property="og:url" content="https://masarray.github.io/arsonkupik-obs-audio-enhancer/">
+  <meta property="og:image" content="https://masarray.github.io/arsonkupik-obs-audio-enhancer/assets/images/og-hero.webp">
+  <meta property="og:image:type" content="image/webp">
+  <meta property="og:image:width" content="1731">
+  <meta property="og:image:height" content="909">
+  <meta property="og:image:alt" content="ArSonKuPik OBS Audio Enhancer promotional banner">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ArSonKuPik OBS Audio Enhancer">
+  <meta name="twitter:description" content="Free open-source smart audio enhancement for OBS Studio — polished, crackle-free, stable, and CPU-conscious.">
+  <meta name="twitter:image" content="https://masarray.github.io/arsonkupik-obs-audio-enhancer/assets/images/og-hero.webp">
+  <meta name="twitter:image:alt" content="ArSonKuPik OBS Audio Enhancer promotional banner">
+
   <link rel="stylesheet" href="styles.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "ArSonKuPik OBS Audio Enhancer",
+    "alternateName": "ArSonKuPik Smart Enhancer",
+    "applicationCategory": "MultimediaApplication",
+    "applicationSubCategory": "OBS Studio audio filter",
+    "operatingSystem": "Windows, Linux",
+    "softwareVersion": "0.4.12",
+    "isAccessibleForFree": true,
+    "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "url": "https://masarray.github.io/arsonkupik-obs-audio-enhancer/",
+    "downloadUrl": "https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases",
+    "codeRepository": "https://github.com/masarray/arsonkupik-obs-audio-enhancer",
+    "image": "https://masarray.github.io/arsonkupik-obs-audio-enhancer/assets/images/og-hero.webp",
+    "description": "Free and open-source smart audio enhancement plugin for OBS Studio with audible macro controls, crackle-free parameter adjustment, calibrated gain staging, stable dynamics, and practical CPU use.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "masarray",
+      "url": "https://github.com/masarray"
+    }
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is ArSonKuPik OBS Audio Enhancer?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "ArSonKuPik is a free and open-source native OBS Studio audio filter for improving perceived loudness, tonal polish, vocal presence, bass, treble, and stereo presentation."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does it add a large hidden volume boost?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The current gain staging is calibrated for a tasteful audible benefit rather than an extreme jump, with the main listening target around 3 to 4 dB in the project smoke test."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is it designed for live OBS use?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. The DSP direction prioritizes crackle-free parameter movement, stable dynamics, practical CPU use, and no mandatory global oversampling."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which platforms are supported?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Public releases provide a Windows installer, a Windows portable ZIP, and a Linux archive."
+        }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <header class="nav">
     <div class="wrap nav-inner">
-      <a class="brand" href="index.html">ArSonKuPik</a>
-      <nav>
+      <a class="brand" href="index.html" aria-label="ArSonKuPik home">ArSonKuPik</a>
+      <nav aria-label="Primary navigation">
         <a href="#features">Features</a>
+        <a href="#quality">Audio quality</a>
+        <a href="#install">Install</a>
+        <a href="#faq">FAQ</a>
         <a href="downloads.html">Downloads</a>
         <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer">GitHub</a>
       </nav>
@@ -20,51 +118,124 @@
   </header>
 
   <main>
-    <section class="hero">
-      <div class="wrap hero-grid">
+    <section class="hero hero-banner" aria-labelledby="hero-title">
+      <div class="wrap">
+        <div class="banner-card">
+          <img src="assets/images/og-hero.webp" width="1731" height="909" fetchpriority="high" alt="ArSonKuPik OBS Audio Enhancer hero banner">
+        </div>
+      </div>
+    </section>
+
+    <section class="hero hero-copy">
+      <div class="wrap hero-grid refined">
         <div>
-          <span class="eyebrow">OBS Studio Audio Filter</span>
-          <h1>Smart audio enhancement for OBS that users can actually hear.</h1>
-          <p class="lead">ArSonKuPik OBS Audio Enhancer is designed to make music, media, and spoken audio sound more polished, more alive, and louder in perception — with a simple user experience and practical real-time performance.</p>
+          <span class="eyebrow">Native OBS Studio audio filter</span>
+          <h1 id="hero-title">Smart audio enhancement that sounds better—not merely louder.</h1>
+          <p class="lead">ArSonKuPik gives music, media, podcasts, and spoken audio a more polished, alive, and engaging presentation while protecting real-time stability. Its macro controls are deliberately audible, but gain staging is calibrated to avoid the huge hidden level jump common in “wow effect” processing.</p>
           <div class="cta-row">
             <a class="btn btn-primary" href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases">Download latest release</a>
+            <a class="btn btn-secondary" href="downloads.html">Installation options</a>
             <a class="btn btn-secondary" href="https://github.com/masarray/arsonkupik-obs-audio-enhancer">View source</a>
           </div>
           <ul class="hero-points">
-            <li>Windows installer + manual ZIP</li>
-            <li>Linux package archive</li>
-            <li>Public release notes and automated builds</li>
+            <li>Crackle-free smoothed parameter movement</li>
+            <li>Calibrated perceived loudness target—not an extreme boost</li>
+            <li>CPU-conscious DSP for streaming and recording</li>
           </ul>
         </div>
         <div class="shot-card">
-          <img src="assets/images/obs-filter-ui.webp" alt="ArSonKuPik OBS Audio Enhancer filter user interface screenshot">
+          <img src="assets/images/obs-filter-ui.webp" loading="lazy" alt="ArSonKuPik OBS Audio Enhancer filter interface in OBS Studio">
         </div>
+      </div>
+    </section>
+
+    <section class="proof-strip" aria-label="Project qualities">
+      <div class="wrap proof-grid">
+        <div><strong>GPL-3.0</strong><span>Free and open source</span></div>
+        <div><strong>Windows + Linux</strong><span>Multiple release formats</span></div>
+        <div><strong>Crackle-free</strong><span>State-preserving DSP updates</span></div>
+        <div><strong>CPU-conscious</strong><span>Designed for practical OBS use</span></div>
       </div>
     </section>
 
     <section id="features" class="section">
       <div class="wrap">
-        <h2>Built for perceived benefit</h2>
-        <p class="section-intro">The project focus is straightforward: when users enable the filter, they should hear a meaningful improvement.</p>
+        <span class="section-kicker">What it improves</span>
+        <h2>Audible controls without an overbuilt workflow</h2>
+        <p class="section-intro">The interface stays simple while each macro moves multiple coordinated DSP controls behind the scenes.</p>
         <div class="card-grid">
-          <article class="card"><h3>Smart enhancement</h3><p>Tuned for cleaner loudness perception, more enjoyable playback, and better day-to-day listening inside OBS.</p></article>
-          <article class="card"><h3>Preset-driven workflow</h3><p>Simple controls for quick setup across music, media, podcast, and low-volume listening use cases.</p></article>
-          <article class="card"><h3>CPU-conscious design</h3><p>Designed for real-time use without treating oversampling or nonlinear processing as the default answer.</p></article>
-          <article class="card"><h3>Professional delivery</h3><p>Automated releases, installer packaging, manual packages, public release notes, and repository hygiene for open-source distribution.</p></article>
+          <article class="card"><h3>Smart Bass</h3><p>Moves from rumble and mud cleanup through neutral to deeper sub weight, body, and punch.</p></article>
+          <article class="card"><h3>Smart Treble</h3><p>Moves from smoother de-harsh and de-ess behavior through neutral to air, presence, and sparkle.</p></article>
+          <article class="card"><h3>Vocal Body</h3><p>Moves from a tucked, smoother vocal lane through neutral to more body, clarity, and forward presence.</p></article>
+          <article class="card"><h3>Stereo Magic</h3><p>Moves from narrow or mono through the original stereo image to a wider, more open presentation.</p></article>
         </div>
       </div>
     </section>
 
-    <section class="section section-alt">
+    <section id="quality" class="section section-alt">
       <div class="wrap split">
         <div>
-          <h2>Distribution that feels production-ready</h2>
-          <p>Tagged releases automatically build and publish multiple installation formats, helping both casual and advanced users install the plugin in the way they prefer.</p>
+          <span class="section-kicker">Engineering priorities</span>
+          <h2>Built around stable listening quality</h2>
+          <p>ArSonKuPik treats real-time audio behavior as a product requirement. Parameter changes preserve filter state, continuous controls are smoothed, preset topology changes are masked by a short transition, and dynamic gain behavior is intentionally constrained.</p>
         </div>
         <div class="stack-list">
-          <div><strong>Windows Installer</strong><span>Single `.exe` for simple installation</span></div>
-          <div><strong>Windows ZIP</strong><span>Portable package for manual copy/paste deployment</span></div>
-          <div><strong>Linux Archive</strong><span>Manual package artifact for supported Linux OBS setups</span></div>
+          <div><strong>Crackle-free movement</strong><span>State-preserving biquad retuning and block-level smoothing</span></div>
+          <div><strong>Stable dynamics</strong><span>Conservative compressor makeup and recovery to reduce pumping</span></div>
+          <div><strong>Calibrated wow effect</strong><span>Internal headroom with partial restore targets a tasteful ON/OFF difference</span></div>
+          <div><strong>Practical CPU profile</strong><span>Dirty-apply updates stop retuning after parameters settle</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="install" class="section">
+      <div class="wrap">
+        <span class="section-kicker">Get started</span>
+        <h2>Install in the format that fits your workflow</h2>
+        <p class="section-intro">The Windows installer is recommended for most users. Portable and Linux packages remain available for manual deployment.</p>
+        <div class="card-grid three">
+          <article class="card recommended-card">
+            <span class="card-badge">Recommended</span>
+            <h3>Windows installer</h3>
+            <p>Close OBS, run the latest setup executable, reopen OBS, and add ArSonKuPik Smart Enhancer to an audio source.</p>
+            <a class="text-link" href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases">Get the installer →</a>
+          </article>
+          <article class="card">
+            <h3>Windows portable ZIP</h3>
+            <p>Extract the package and copy the plugin folder into the standard OBS ProgramData plugin directory.</p>
+            <a class="text-link" href="downloads.html">View manual steps →</a>
+          </article>
+          <article class="card">
+            <h3>Linux archive</h3>
+            <p>Extract the release archive and deploy the package tree into the OBS plugin path used by your distribution.</p>
+            <a class="text-link" href="downloads.html">View package details →</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="section section-alt">
+      <div class="wrap">
+        <span class="section-kicker">FAQ</span>
+        <h2>Common questions</h2>
+        <div class="faq-grid">
+          <details open><summary>Is ArSonKuPik free?</summary><p>Yes. The project is free and open source under the GNU General Public License v3.0.</p></details>
+          <details><summary>How loud should Filter ON be?</summary><p>The current gain-staging target is a tasteful audible benefit rather than an extreme jump. The main project smoke test targets roughly 3–4 dB of peak benefit.</p></details>
+          <details><summary>Will moving a slider create crackle?</summary><p>The current engine preserves filter history and smooths continuous parameters to prevent the state resets and zipper noise that caused earlier crackle.</p></details>
+          <details><summary>Does it require powerful hardware?</summary><p>The engine is designed for practical live use and avoids making global oversampling the default. Actual CPU use still depends on the system, sample rate, sources, and OBS scene complexity.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="section final-cta">
+      <div class="wrap final-cta-inner">
+        <div>
+          <span class="section-kicker">Open-source OBS audio</span>
+          <h2>Make the improvement audible, stable, and easy to use.</h2>
+        </div>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases">Download ArSonKuPik</a>
+          <a class="btn btn-secondary" href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/issues">Report an issue</a>
         </div>
       </div>
     </section>
@@ -72,8 +243,8 @@
 
   <footer class="footer">
     <div class="wrap footer-inner">
-      <span>© ArSonKuPik OBS Audio Enhancer</span>
-      <span>GPL-3.0</span>
+      <span>ArSonKuPik OBS Audio Enhancer · GPL-3.0</span>
+      <span>Independent open-source project; not affiliated with or endorsed by OBS Project.</span>
     </div>
   </footer>
 </body>
