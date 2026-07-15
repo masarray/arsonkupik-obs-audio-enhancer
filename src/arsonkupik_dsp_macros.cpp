@@ -10,21 +10,21 @@ constexpr double kInternalChainHeadroomDb = -8.0;
 constexpr double kInternalRestoreDb = 4.9;
 
 // Fixed, source-independent calibration. The values follow factory_presets()
-// order and keep each preset's default ON/bypass benefit near 3-4 dB without
-// reintroducing a dynamic makeup AGC or pumping-prone gain loop.
+// order and keep each preset's default perceived ON/bypass benefit near 3 dB
+// RMS without reintroducing a dynamic makeup AGC or pumping-prone gain loop.
 constexpr std::array<double, 12> kPresetWowTrimDb = {
-    0.30,  // MasAri
-    3.25,  // Mastering Global
+    1.05,  // MasAri
+    3.60,  // Mastering Global
     2.35,  // Max Enhancer
-    0.00,  // SonKuHoreg
-   -0.95,  // SonKuBattle
-   -0.35,  // SonKuBalap
-    4.20,  // Audiophile
+    0.42,  // SonKuHoreg
+   -0.48,  // SonKuBattle
+    0.06,  // SonKuBalap
+    4.40,  // Audiophile
     1.95,  // Punchy Music
-    3.30,  // Open Air
-    5.00,  // Movie Sub
-    4.40,  // Podcast
-    8.20   // Night Listening
+    3.45,  // Open Air
+    5.58,  // Movie Sub
+    4.60,  // Podcast
+    8.92   // Night Listening
 };
 
 double preset_wow_trim_db(std::size_t preset_index)
