@@ -1,0 +1,111 @@
+name: Calibrate v0.4.14 preset wow levels
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/calibrate-v0414.ready'
+
+permissions:
+  contents: write
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply preset loudness calibration
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected text not found in {path}: {old}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          replace('CMakeLists.txt',
+                  'project(arsonkupik-obs-audio-enhancer VERSION 0.4.13 LANGUAGES CXX)',
+                  'project(arsonkupik-obs-audio-enhancer VERSION 0.4.14 LANGUAGES CXX)')
+
+          replacements = {
+              'return {0.0, 0.35, true, -0.90, 0.82, true, false};':
+                  'return {0.0, 0.55, true, -0.90, 0.82, true, false};',
+              'p.output = {0, 0.70, true, -0.90, 0.50, true, false};':
+                  'p.output = {0, 1.55, true, -0.90, 0.50, true, false};',
+              'p.output = {0, 0.80, true, -0.90, 0.68, true, false};':
+                  'p.output = {0, 1.35, true, -0.90, 0.68, true, false};',
+              'p.output = {0, 0.90, true, -1.00, 0.76, true, false};':
+                  'p.output = {0, 1.25, true, -1.00, 0.76, true, false};',
+              'p.output = {0, 0.95, true, -1.00, 0.80, true, false};':
+                  'p.output = {0, 1.00, true, -1.00, 0.80, true, false};',
+              'p.output = {0, 0.95, true, -1.00, 0.78, true, false};':
+                  'p.output = {0, 1.08, true, -1.00, 0.78, true, false};',
+              'p.output = {0, 0.70, true, -0.90, 0.44, true, false};':
+                  'p.output = {0, 1.80, true, -0.90, 0.44, true, false};',
+              'p.output = {0, 0.90, true, -0.90, 0.72, true, false};':
+                  'p.output = {0, 1.40, true, -0.90, 0.72, true, false};',
+              'p.output = {0, 0.85, true, -1.00, 0.66, true, false};':
+                  'p.output = {0, 1.75, true, -1.00, 0.66, true, false};',
+              'p.output = {0, 0.70, true, -0.95, 0.42, true, false};':
+                  'p.output = {0, 2.05, true, -0.95, 0.42, true, false};',
+              'p.output = {0, 0.85, true, -0.95, 0.30, true, false};':
+                  'p.output = {0, 2.05, true, -0.95, 0.30, true, false};',
+              'p.output = {0, 0.65, true, -1.05, 0.22, true, false};':
+                  'p.output = {0, 2.35, true, -1.05, 0.22, true, false};',
+          }
+          path = Path('src/arsonkupik_presets.cpp')
+          text = path.read_text(encoding='utf-8')
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Expected preset calibration line not found: {old}')
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+
+          smoke = Path('tests/dsp_smoke_test.cpp')
+          text = smoke.read_text(encoding='utf-8')
+          old = '''        const bool defaultLevelOutsideTarget = preset.id == "default" && (benefit < 2.0 || benefit > 4.5);\n        const bool extremeHiddenVolumeBoost = benefit > 5.0;\n        if (!std::isfinite(out_peak) || out_peak > -0.20 || m.clipping\n            || defaultLevelOutsideTarget || extremeHiddenVolumeBoost) {'''
+          new = '''        const bool presetLevelOutsideTarget = benefit < 2.80 || benefit > 4.45;\n        if (!std::isfinite(out_peak) || out_peak > -0.20 || m.clipping\n            || presetLevelOutsideTarget) {'''
+          if old not in text:
+              raise SystemExit('Expected smoke-test threshold block not found')
+          smoke.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          changelog = Path('CHANGELOG.md')
+          old_text = changelog.read_text(encoding='utf-8')
+          entry = '''# Changelog\n\nAll notable changes to this project are documented here.\n\n## [0.4.14] - 2026-07-15\n### Changed\n- Calibrated every factory preset for an immediate, consistent Filter ON wow effect.\n- Raised conservative presets with static preset-specific output compensation instead of dynamic AGC.\n- Preserved v0.4.13 crackle-free thread safety, fixed headroom, low CPU behavior, and no-pumping dynamics.\n- Tightened the preset smoke test so every factory preset must remain between +2.8 dB and +4.45 dB on the maintained reference signal.\n\n'''
+          prefix = '# Changelog\n\nAll notable changes to this project are documented here.\n\n'
+          if not old_text.startswith(prefix):
+              raise SystemExit('Unexpected CHANGELOG header')
+          changelog.write_text(entry + old_text[len(prefix):], encoding='utf-8')
+
+          notes = '''# ArSonKuPik OBS Audio Enhancer v0.4.14\n\n## Highlights\n- Makes every factory preset deliver a clearer instant wow effect when the filter is enabled.\n- Calibrates the maintained reference signal to approximately +3 to +4 dB for every preset.\n- Uses fixed per-preset output compensation, not a moving loudness AGC, so bass-heavy material remains stable.\n\n## What changed\n- Raised output compensation primarily on conservative presets such as Audiophile, Movie Sub, Podcast, Night Listening, Open Air, and Mastering Global.\n- Kept stronger battle and bass presets close to their existing level so they do not become excessive.\n- Preserved the v0.4.13 lock-free parameter path, fixed EQ topology, dual-engine preset crossfade, cached coefficients, true stereo correlation, and unity-preserving parallel compression.\n- The standalone smoke test now rejects any factory preset below +2.8 dB or above +4.45 dB on the maintained reference signal.\n\n## Validation boundary\nThe automated standalone tests validate the maintained synthetic reference. Final perceived loudness and tonal balance still require listening checks in OBS with music, speech, movies, and bass-heavy program material.\n'''
+          Path('docs/releases/v0.4.14.md').write_text(notes, encoding='utf-8')
+          Path('docs/releases/latest.md').write_text(notes, encoding='utf-8')
+
+          Path('.github/calibrate-v0414.ready').unlink()
+          Path('.github/workflows/calibrate-v0414-wow.yml').unlink()
+
+      - name: Configure standalone tests
+        run: cmake -S . -B build-test -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
+
+      - name: Build standalone tests
+        run: cmake --build build-test --config Release
+
+      - name: Run preset calibration smoke test
+        run: ./build-test/arsonkupik_dsp_smoke
+
+      - name: Run realtime hardening regression test
+        run: ./build-test/arsonkupik_dsp_hardening
+
+      - name: Commit calibrated presets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Calibrate all presets for consistent instant wow level"
+          git push origin HEAD:main
