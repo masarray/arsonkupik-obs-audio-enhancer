@@ -1,0 +1,37 @@
+name: Apply v0.4.13 hardening patch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/patches/v0.4.13-hardening.patch.gz.b64'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply hardening patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          PATCH_B64=".github/patches/v0.4.13-hardening.patch.gz.b64"
+          if [[ ! -f "$PATCH_B64" ]]; then
+            echo "Patch file already consumed."
+            exit 0
+          fi
+          base64 --decode "$PATCH_B64" | gzip -dc > /tmp/v0413.patch
+          git apply --check /tmp/v0413.patch
+          git apply /tmp/v0413.patch
+          rm "$PATCH_B64"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Harden realtime engine for crackle-free stable audio"
+          git push origin HEAD:main
