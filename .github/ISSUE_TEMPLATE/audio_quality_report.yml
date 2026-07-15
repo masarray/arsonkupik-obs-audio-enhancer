@@ -1,0 +1,167 @@
+name: Audio quality report
+description: Report crackle, pumping, distortion, excessive loudness, weak macro response, or stereo problems.
+title: "[Audio Quality]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Audio reports need more detail than ordinary bug reports. Please compare Filter ON and bypass at a controlled listening level and describe exactly what changes.
+
+  - type: input
+    id: plugin_version
+    attributes:
+      label: ArSonKuPik version
+      placeholder: vX.Y.Z
+    validations:
+      required: true
+
+  - type: input
+    id: obs_version
+    attributes:
+      label: OBS Studio version
+      placeholder: Example: 31.0.3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: operating_system
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: symptom
+    attributes:
+      label: Main symptom
+      options:
+        - Crackle or zipper noise while moving a control
+        - Pop or click while changing presets
+        - Pumping or breathing
+        - Filter ON is excessively louder than bypass
+        - Distortion or harshness
+        - Bass becomes muddy or blunt
+        - Vocal loses focus or body
+        - Stereo collapse, phasey sound, or unstable center
+        - Macro control effect is too weak
+        - CPU spike or audio dropout
+        - Other audio-quality problem
+    validations:
+      required: true
+
+  - type: input
+    id: sample_rate
+    attributes:
+      label: Sample rate
+      placeholder: Example: 48 kHz
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source_type
+    attributes:
+      label: Audio source type
+      options:
+        - Music playback
+        - Browser or media source
+        - Microphone / spoken voice
+        - Podcast or interview
+        - Game audio
+        - Mixed program audio
+        - Test signal
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: preset
+    attributes:
+      label: Preset
+      placeholder: Exact preset name
+    validations:
+      required: true
+
+  - type: textarea
+    id: control_values
+    attributes:
+      label: Control values
+      description: Include Enhance, Smart Bass, Smart Treble, Vocal Body, Stereo Magic, Output Trim, Smart Protect, and Bypass state.
+      placeholder: |
+        Enhance: 50
+        Smart Bass: 50
+        Smart Treble: 50
+        Vocal Body: 50
+        Stereo Magic: 50
+        Output Trim: 0 dB
+        Smart Protect: ON
+    validations:
+      required: true
+
+  - type: textarea
+    id: input_level
+    attributes:
+      label: Input and output level observations
+      description: Include OBS meter behavior or measured peak/RMS/LUFS information when available. State whether the comparison was loudness matched.
+      placeholder: Example: bypass peak -10 dBFS; Filter ON peak -6 dBFS; not loudness matched.
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Exact reproduction steps
+      placeholder: |
+        1. Start continuous playback
+        2. Select preset ...
+        3. Move Smart Bass from 0 to 100
+        4. Hear crackle near ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: observation
+    attributes:
+      label: What do you hear?
+      description: Describe the timing, frequency range, stereo position, source dependency, and whether the problem remains after the control stops moving.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      placeholder: Describe the stable and musical behavior you expected.
+    validations:
+      required: true
+
+  - type: input
+    id: sample_link
+    attributes:
+      label: Optional audio sample or video link
+      description: Use material you are permitted to share. A short bypass/ON comparison is most useful.
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: OBS log or performance information
+      description: Include the OBS log and CPU/rendering information when the symptom involves dropouts or load.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I reproduced this with the latest public release or current main branch.
+          required: true
+        - label: I compared Filter ON and bypass without changing the OBS source fader.
+          required: true
+        - label: I checked whether the problem occurs with more than one audio file or source.
+          required: true
+        - label: I searched existing issues for the same audio symptom.
+          required: true
