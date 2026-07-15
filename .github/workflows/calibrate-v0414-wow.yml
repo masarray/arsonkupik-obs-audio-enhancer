@@ -1,6 +1,7 @@
 name: Calibrate v0.4.14 preset wow levels
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -87,7 +88,7 @@ jobs:
           Path('docs/releases/v0.4.14.md').write_text(notes, encoding='utf-8')
           Path('docs/releases/latest.md').write_text(notes, encoding='utf-8')
 
-          Path('.github/calibrate-v0414.ready').unlink()
+          Path('.github/calibrate-v0414.ready').unlink(missing_ok=True)
           Path('.github/workflows/calibrate-v0414-wow.yml').unlink()
 
       - name: Configure standalone tests
