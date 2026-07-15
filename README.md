@@ -11,6 +11,7 @@
   <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/release.yml"><img alt="Release" src="https://github.com/masarray/arsonkupik-obs-audio-enhancer/actions/workflows/release.yml/badge.svg"></a>
   <a href="#downloads"><img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational"></a>
+  <a href="https://masarray.github.io/arsonkupik-obs-audio-enhancer/support.html"><img alt="Support development" src="https://img.shields.io/badge/Support-development-ea4aaa?logo=githubsponsors&logoColor=white"></a>
 </p>
 
 <p align="center">
@@ -21,6 +22,8 @@
   <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases"><strong>Download latest release</strong></a>
   ·
   <a href="https://masarray.github.io/arsonkupik-obs-audio-enhancer/">Product site</a>
+  ·
+  <a href="https://masarray.github.io/arsonkupik-obs-audio-enhancer/support.html">Support development</a>
   ·
   <a href="docs/BUILD_WINDOWS.md">Build guide</a>
   ·
@@ -56,12 +59,30 @@ ArSonKuPik is maintained against explicit real-time audio goals:
 
 See [Audio quality standards](docs/AUDIO_QUALITY.md) for validation methods, implementation rules, listening protocol, and release gates.
 
+## Support development
+
+ArSonKuPik remains free, complete, and open source under GPL-3.0. Voluntary support helps fund Windows and Linux validation, OBS compatibility work, release engineering, audio-quality regression testing, documentation, and continued public development.
+
+Official support entry point:
+
+- **Global:** GitHub Sponsors for one-time or recurring support
+- **Indonesia:** verified merchant QRIS after the official QR image and recipient name are validated
+- **Funding policy:** no paid feature unlocks, no sponsor-controlled roadmap, and no guaranteed deliverables
+- **Recognition:** optional and opt-in through [`SUPPORTERS.md`](SUPPORTERS.md)
+
+Use only the official support page:
+
+**https://masarray.github.io/arsonkupik-obs-audio-enhancer/support.html**
+
+Do not trust payment links, account numbers, or QR images shared elsewhere unless the same destination is published on that page. See [Funding policy](docs/FUNDING_POLICY.md).
+
 ## Quality, support, and contribution
 
 - [Audio quality standards](docs/AUDIO_QUALITY.md) — DSP targets, gain-staging policy, crackle and pumping validation, CPU expectations, stereo tests, and release gates
 - [Support guide](SUPPORT.md) — installation, build, diagnostic, and audio-report requirements
 - [Contributing guide](CONTRIBUTING.md) — contributor workflow, real-time audio-thread rules, test requirements, and pull-request checklist
 - [Security policy](SECURITY.md) — supported versions, private vulnerability reporting, coordinated disclosure, and release-safety guidance
+- [Funding policy](docs/FUNDING_POLICY.md) — official channels, use of funds, supporter recognition, independence, privacy, and payment security
 
 ## Downloads
 
@@ -138,10 +159,10 @@ See [docs/RELEASE_AUTOMATION.md](docs/RELEASE_AUTOMATION.md).
 ## Repository structure
 
 ```text
-.github/            GitHub Actions workflows and templates
+.github/            GitHub Actions workflows, templates, and funding entry point
 assets/             README and branding assets
 data/               OBS plugin data and locale files
-docs/               public docs, release notes, and landing page
+docs/               public docs, policies, release notes, and landing page
 include/            DSP headers
 packaging/windows/  Inno Setup installer script
 scripts/            build/package scripts
