@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support and reporting guide
+    url: https://github.com/masarray/arsonkupik-obs-audio-enhancer/blob/main/SUPPORT.md
+    about: Read the information required for useful installation, build, and audio-quality reports.
+  - name: Security vulnerability report
+    url: https://github.com/masarray/arsonkupik-obs-audio-enhancer/blob/main/SECURITY.md
+    about: Do not disclose security-sensitive details in a public issue.
+  - name: Latest release and installation packages
+    url: https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases/latest
+    about: Download the current Windows installer, portable ZIP, or Linux archive before reporting an issue fixed in a newer release.
