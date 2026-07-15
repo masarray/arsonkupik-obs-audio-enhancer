@@ -20,6 +20,8 @@
 <p align="center">
   <a href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases"><strong>Download latest release</strong></a>
   ·
+  <a href="https://masarray.github.io/arsonkupik-obs-audio-enhancer/">Product site</a>
+  ·
   <a href="docs/BUILD_WINDOWS.md">Build guide</a>
   ·
   <a href="docs/releases/">Release notes</a>
@@ -39,6 +41,27 @@
 - Stereo integrity-first enhancement designed to preserve center focus
 - CPU-conscious DSP direction for live streaming
 - Automated public releases with installer, portable ZIP, Linux package, and release notes
+
+## Public quality targets
+
+ArSonKuPik is maintained against explicit real-time audio goals:
+
+- crackle-free continuous control movement;
+- click-safe preset switching;
+- stable dynamics without obvious pumping or breathing;
+- calibrated Filter ON benefit rather than an extreme hidden volume jump;
+- practical CPU behavior that stops retuning after parameters settle;
+- audible Smart Bass, Smart Treble, Vocal Body, and Stereo Magic ranges;
+- stable center focus and useful mono compatibility.
+
+See [Audio quality standards](docs/AUDIO_QUALITY.md) for validation methods, implementation rules, listening protocol, and release gates.
+
+## Quality, support, and contribution
+
+- [Audio quality standards](docs/AUDIO_QUALITY.md) — DSP targets, gain-staging policy, crackle and pumping validation, CPU expectations, stereo tests, and release gates
+- [Support guide](SUPPORT.md) — installation, build, diagnostic, and audio-report requirements
+- [Contributing guide](CONTRIBUTING.md) — contributor workflow, real-time audio-thread rules, test requirements, and pull-request checklist
+- [Security policy](SECURITY.md) — supported versions, private vulnerability reporting, coordinated disclosure, and release-safety guidance
 
 ## Downloads
 
