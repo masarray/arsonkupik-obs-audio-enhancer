@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.13] - 2026-07-15
+### Fixed
+- Replaced UI/audio shared `RuntimeParams` and string access with a bounded seqlock-style atomic POD snapshot.
+- Moved all DSP engine preparation, parameter application, and preset mutation to the OBS audio callback.
+- Replaced preset fade-to-silence with a normalized dual-engine 10 ms crossfade.
+- Kept macro EQ topology fixed during Smart Bass automation so crossing cleanup thresholds no longer resizes or resets the biquad bank.
+- Replaced dynamic input-headroom and smart-makeup AGC loops with fixed calibrated headroom and restore to prevent breathing after bass transients.
+- Normalized parallel-compressor mixing so correlated dry/wet lanes no longer create an intrinsic level boost.
+- Cached compressor, limiter, width-detector, and gain coefficients outside per-sample hot paths.
+- Reworked stereo correlation to use smoothed energy terms `E[L×R] / sqrt(E[L²]E[R²])` at control rate.
+- Moved metering to block rate and added denormal protection for stateful biquads.
+- Added a hardening regression test for automation discontinuity, limiter ceiling, stereo correlation, pumping stability, and zero steady-state allocations.
+
 ## [0.4.12] - 2026-07-14
 ### Fixed
 - Recalibrated ON/OFF gain staging so Filter ON targets a tasteful wow effect instead of a hidden large volume jump.
