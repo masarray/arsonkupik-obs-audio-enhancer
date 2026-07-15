@@ -39,13 +39,8 @@ jobs:
         run: cmake -S . -B build-test -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
       - name: Build
         run: cmake --build build-test --config Release
-      - name: Run preset smoke test
-        run: ./build-test/arsonkupik_dsp_smoke | tee preset-calibration.txt
-      - name: Upload preset calibration probe
-        uses: actions/upload-artifact@v4
-        with:
-          name: preset-calibration-probe
-          path: preset-calibration.txt
+      - name: Run preset loudness and clipping gate
+        run: ./build-test/arsonkupik_dsp_smoke
       - name: Run realtime hardening test
         run: ./build-test/arsonkupik_dsp_hardening
 
