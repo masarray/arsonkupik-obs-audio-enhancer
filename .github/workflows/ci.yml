@@ -31,7 +31,7 @@ jobs:
           path: package-programdata
 
   dsp-smoke-test:
-    name: DSP smoke and realtime hardening
+    name: DSP loudness, realtime, and transition hardening
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,10 +39,12 @@ jobs:
         run: cmake -S . -B build-test -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
       - name: Build
         run: cmake --build build-test --config Release
-      - name: Run preset loudness and clipping gate
+      - name: Run multi-level preset loudness and clipping matrix
         run: ./build-test/arsonkupik_dsp_smoke
-      - name: Run realtime hardening test
+      - name: Run realtime DSP hardening test
         run: ./build-test/arsonkupik_dsp_hardening
+      - name: Run OBS-equivalent preset and bypass transition test
+        run: ./build-test/arsonkupik_transition_hardening
 
   linux-plugin-build:
     name: Linux plugin build smoke
