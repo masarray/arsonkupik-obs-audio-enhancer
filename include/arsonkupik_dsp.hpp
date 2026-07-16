@@ -57,7 +57,7 @@ struct ColorConfig {
     double drive = 3.12;
     double body_freq = 166.0;
     double body = 12.8;
-    double smart_bass = 55.0;
+    double smart_bass = 68.0;
     double warmth_freq = 500.0;
     double warmth = 12.8;
     double harmonics_freq = 2180.0;
@@ -101,11 +101,11 @@ struct OutputConfig {
 
 struct MacroConfig {
     double masari_feel = 100.0;
-    double enhance = 65.0;
-    double smart_bass = 55.0;
-    double smart_treble = 70.0;
-    double vocal_body = 65.0;
-    double stereo_magic = 85.0;
+    double enhance = 78.0;
+    double smart_bass = 68.0;
+    double smart_treble = 80.0;
+    double vocal_body = 76.0;
+    double stereo_magic = 88.0;
     bool smart_protect = true;
 };
 
@@ -119,6 +119,7 @@ struct Preset {
     WidthConfig width;
     OutputConfig output;
     MacroConfig macro;
+    double calibrated_wow_trim_db = 0.0;
 };
 
 const std::vector<Preset>& factory_presets();
@@ -143,12 +144,12 @@ inline const Preset& preset_at_index(std::size_t index)
 // Public convenience structure used by tests and non-realtime callers.
 struct RuntimeParams {
     std::string preset_id = "default";
-    double enhance = 65.0;
-    double smart_bass = 55.0;
-    double smart_treble = 70.0;
-    double vocal_body = 65.0;
-    double stereo_magic = 85.0;
-    double output_trim_db = -0.55;
+    double enhance = 78.0;
+    double smart_bass = 68.0;
+    double smart_treble = 80.0;
+    double vocal_body = 76.0;
+    double stereo_magic = 88.0;
+    double output_trim_db = 0.35;
     bool smart_protect = true;
     bool bypass = false;
     bool advanced_override = false;
@@ -157,16 +158,19 @@ struct RuntimeParams {
 // Allocation-free POD parameter block for the OBS audio thread.
 struct EngineParams {
     std::uint32_t preset_index = 0;
-    double enhance = 65.0;
-    double smart_bass = 55.0;
-    double smart_treble = 70.0;
-    double vocal_body = 65.0;
-    double stereo_magic = 85.0;
-    double output_trim_db = -0.55;
+    double enhance = 78.0;
+    double smart_bass = 68.0;
+    double smart_treble = 80.0;
+    double vocal_body = 76.0;
+    double stereo_magic = 88.0;
+    double output_trim_db = 0.35;
     bool smart_protect = true;
     bool bypass = false;
     bool advanced_override = false;
 };
+
+RuntimeParams default_runtime_params();
+EngineParams default_engine_params();
 
 class Biquad {
 public:
@@ -197,6 +201,16 @@ struct MeterState {
     double gain_reduction_db = 0.0;
     double correlation = 1.0;
     bool clipping = false;
+};
+
+struct EngineDebugCounters {
+    std::uint64_t eq_rebuilds = 0;
+    std::uint64_t color_rebuilds = 0;
+    std::uint64_t width_rebuilds = 0;
+    std::uint64_t compressor_updates = 0;
+    std::uint64_t limiter_updates = 0;
+    std::uint64_t gain_updates = 0;
+    std::uint64_t hard_bypass_blocks = 0;
 };
 
 class DynamicsProcessor {
@@ -252,10 +266,11 @@ public:
     void process(float** planes, std::size_t channels, std::size_t frames);
     const MeterState& meters() const { return meters_; }
     const Preset& current_preset() const { return *preset_; }
+    const EngineDebugCounters& debug_counters() const { return debug_counters_; }
 
 private:
     void load_working_from_preset();
-    void rebuild_from_preset();
+    void rebuild_all_processors();
     void rebuild_eq();
     void rebuild_color_filters();
     void rebuild_width_filters();
@@ -319,6 +334,8 @@ private:
     DynamicsProcessor compressor_;
     LimiterProcessor limiter_;
     OnePoleSmoother bypass_smooth_;
+    bool hard_bypass_active_ = false;
+    EngineDebugCounters debug_counters_{};
 
     // Control-rate stereo analysis with true energy correlation.
     static constexpr std::uint32_t kWidthControlInterval = 16;

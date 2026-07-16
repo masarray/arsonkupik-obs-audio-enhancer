@@ -41,7 +41,7 @@ float ArSonKuPikEngine::process_channel_eq(std::size_t ch, float x)
 std::pair<float,float> ArSonKuPikEngine::process_color(float l, float r)
 {
     const auto& c = working_.color;
-    if (!c.enabled || c.mix <= 0.0) return {l, r};
+    if (!c.enabled) return {l, r};
 
     const double mix = clamp01(c.mix / 100.0);
     const double harmonic = clamp01(c.harmonics / 100.0);
@@ -124,7 +124,7 @@ std::pair<float,float> ArSonKuPikEngine::process_color(float l, float r)
 std::pair<float,float> ArSonKuPikEngine::process_width(float l, float r)
 {
     const auto& w = working_.width;
-    if (!w.enabled || w.mix <= 0.0) return {l, r};
+    if (!w.enabled) return {l, r};
 
     const double width_mix = clamp01(w.mix / 100.0);
     const double master_expand = clamp((w.width - 100.0) / 100.0, 0.0, 1.0);
@@ -253,6 +253,28 @@ void ArSonKuPikEngine::process(float** planes, std::size_t channels, std::size_t
     channels = std::min<std::size_t>(channels, channels_);
     if (channels == 0 || !planes[0]) return;
 
+    if (!params_.bypass) hard_bypass_active_ = false;
+    if (hard_bypass_active_ && params_.bypass) {
+        double block_peak = 0.0;
+        double corr_lr = 0.0;
+        double corr_l2 = 0.0;
+        double corr_r2 = 0.0;
+        for (std::size_t i = 0; i < frames; ++i) {
+            const double l = planes[0][i];
+            const double r = channels > 1 && planes[1] ? planes[1][i] : l;
+            block_peak = std::max(block_peak, std::max(std::abs(l), std::abs(r)));
+            corr_lr += l * r;
+            corr_l2 += l * l;
+            corr_r2 += r * r;
+        }
+        const double inv_frames = 1.0 / static_cast<double>(frames);
+        update_meters_block(block_peak, block_peak, 0.0,
+                            corr_lr * inv_frames, corr_l2 * inv_frames,
+                            corr_r2 * inv_frames, frames);
+        ++debug_counters_.hard_bypass_blocks;
+        return;
+    }
+
     const double bypass_t = params_.bypass ? 1.0 : 0.0;
     double block_in_peak = 0.0;
     double block_out_peak = 0.0;
@@ -300,6 +322,7 @@ void ArSonKuPikEngine::process(float** planes, std::size_t channels, std::size_t
         }
 
         const double bypass = bypass_smooth_.process(bypass_t);
+        if (params_.bypass && bypass >= 0.9995) hard_bypass_active_ = true;
         l = sane(static_cast<float>(static_cast<double>(l) * (1.0 - bypass) + static_cast<double>(original[0]) * bypass));
         r = sane(static_cast<float>(static_cast<double>(r) * (1.0 - bypass)
                                   + static_cast<double>(channels > 1 ? original[1] : original[0]) * bypass));

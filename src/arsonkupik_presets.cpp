@@ -92,10 +92,15 @@ std::vector<Preset> make_presets()
     std::vector<Preset> presets;
 
     // Frozen golden reference from extension v0.3.100: this is the auditory reference curve.
-    presets.push_back(base("default", "MasAri", "Golden reference: bass bulat bernapas, stereo magic luas, airy silky treble, ear-tickle detail."));
+    {
+        auto p = base("default", "MasAri", "Golden reference: bass bulat bernapas, stereo magic luas, airy silky treble, ear-tickle detail.");
+        p.calibrated_wow_trim_db = 1.05;
+        presets.push_back(p);
+    }
 
     {
         auto p = base("mastering", "Mastering Global", "Global-smart mastering: living mid, glerr deep bass pocket, open stereo sheen, velvet treble.");
+        p.calibrated_wow_trim_db = 3.60;
         p.eq = {
             b("master-sub-clean", EqType::LowCut, 26, 0, 0.70710678, 24),
             b("master-weight", EqType::LowShelf, 82, 1.18, 0.68),
@@ -118,6 +123,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("max-enhancer", "Max Enhancer", "Maximum musical enhancement: breathing bass, creamy mid detail, tasteful side tickle, lively stereo.");
+        p.calibrated_wow_trim_db = 2.35;
         p.eq = {
             b("max-sub-clean", EqType::LowCut, 28, 0, 0.70710678, 24),
             b("max-low-body", EqType::LowShelf, 88, 1.55, 0.66),
@@ -137,6 +143,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("sonkuhoreg", "SonKuHoreg", "Deep slow-bass pressure: sub torque, wall-shake bass harmonics, far mid, enjoyable 3D sparkle.");
+        p.calibrated_wow_trim_db = 0.42;
         p.eq = {
             b("horeg-sub-clean", EqType::LowCut, 21, 0, 0.70710678, 24),
             b("horeg-low-body", EqType::LowShelf, 58, 3.20, 0.54),
@@ -161,6 +168,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("sonkubattle", "SonKuBattle", "SPL battle preset: dBA/dBC energy, dense bass torque, far-throwing mid, clip-aware output control.");
+        p.calibrated_wow_trim_db = -0.48;
         p.eq = {
             b("battle-sub-clean", EqType::LowCut, 26, 0, 0.70710678, 24),
             b("battle-low-body", EqType::LowShelf, 62, 2.85, 0.52),
@@ -187,6 +195,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("sonkubalap", "SonKuBalap", "Efficient sound-battle preset: powerful dBA/dBC energy while avoiding wasteful ultra-low amp load.");
+        p.calibrated_wow_trim_db = 0.06;
         p.eq = {
             b("balap-sub-clean", EqType::LowCut, 31, 0, 0.70710678, 24),
             b("balap-low-body", EqType::LowShelf, 66, 2.42, 0.50),
@@ -214,6 +223,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("audiophile-pop", "Audiophile", "Popular audiophile balance: clean vocal center, refined sparkle, controlled bass, non-fatiguing.");
+        p.calibrated_wow_trim_db = 4.40;
         p.eq = {
             b("audiophile-cut", EqType::LowCut, 30, 0, 0.70710678, 24),
             b("audiophile-low", EqType::LowShelf, 84, 0.95, 0.70),
@@ -233,6 +243,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("pro-music", "Punchy Music", "Punchy bass, thick groove, stronger transient glue, and sparkling musical detail.");
+        p.calibrated_wow_trim_db = 1.95;
         p.eq = {
             b("pro-cut", EqType::LowCut, 28, 0, 0.70710678, 24),
             b("pro-low", EqType::LowShelf, 82, 2.12, 0.64),
@@ -253,6 +264,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("open-air-field", "Open Air", "Sound lapangan/open-air preset: bigger bass contour, forward vocal guard, side-air sparkle, limiter-safe.");
+        p.calibrated_wow_trim_db = 3.45;
         p.eq = {
             b("field-cut", EqType::LowCut, 32, 0, 0.70710678, 24),
             b("field-low-contour", EqType::LowShelf, 92, 2.55, 0.68),
@@ -272,6 +284,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("movie-dolby", "Movie Sub", "Thick sub, clean low-mid, guarded dialogue clarity, smooth cinematic width.");
+        p.calibrated_wow_trim_db = 5.58;
         p.eq = {
             b("movie-cut", EqType::LowCut, 24, 0, 0.70710678, 24),
             b("movie-low", EqType::LowShelf, 58, 2.35, 0.70),
@@ -293,6 +306,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("podcast", "Podcast", "Voice-safe polish: controlled lows, smooth compression, soft air, no crackle.");
+        p.calibrated_wow_trim_db = 4.60;
         p.eq = {
             b("podcast-cut", EqType::LowCut, 58, 0, 0.70710678, 24),
             b("podcast-low", EqType::LowShelf, 118, 0.10, 0.64),
@@ -314,6 +328,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("night-listening", "Night Listening", "Soft warm sleep-friendly listening: rounded presence, relaxed highs, no stereo stimulation.");
+        p.calibrated_wow_trim_db = 8.92;
         p.eq = {
             b("night-cut", EqType::LowCut, 42, 0, 0.70710678, 12),
             b("night-low", EqType::LowShelf, 98, -1.15, 0.64),
@@ -352,6 +367,40 @@ const Preset& default_preset()
 {
     const Preset* p = find_preset("default");
     return p ? *p : factory_presets().front();
+}
+
+RuntimeParams default_runtime_params()
+{
+    const auto& p = default_preset();
+    RuntimeParams params;
+    params.preset_id = p.id;
+    params.enhance = p.macro.enhance;
+    params.smart_bass = p.macro.smart_bass;
+    params.smart_treble = p.macro.smart_treble;
+    params.vocal_body = p.macro.vocal_body;
+    params.stereo_magic = p.macro.stereo_magic;
+    params.output_trim_db = p.output.output_gain_db;
+    params.smart_protect = p.macro.smart_protect;
+    params.bypass = false;
+    params.advanced_override = false;
+    return params;
+}
+
+EngineParams default_engine_params()
+{
+    const auto& p = default_preset();
+    EngineParams params;
+    params.preset_index = static_cast<std::uint32_t>(preset_index_from_id(p.id));
+    params.enhance = p.macro.enhance;
+    params.smart_bass = p.macro.smart_bass;
+    params.smart_treble = p.macro.smart_treble;
+    params.vocal_body = p.macro.vocal_body;
+    params.stereo_magic = p.macro.stereo_magic;
+    params.output_trim_db = p.output.output_gain_db;
+    params.smart_protect = p.macro.smart_protect;
+    params.bypass = false;
+    params.advanced_override = false;
+    return params;
 }
 
 } // namespace arsonkupik
