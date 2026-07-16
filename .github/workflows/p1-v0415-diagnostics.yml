@@ -1,0 +1,50 @@
+name: Capture v0.4.15 P1 diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/p1-v0415-diagnostics.ready'
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Configure and build
+        run: |
+          cmake -S . -B build-test -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
+          cmake --build build-test --config Release
+      - name: Capture test output
+        shell: bash
+        run: |
+          mkdir -p docs/internal
+          set +e
+          {
+            echo '=== arsonkupik_dsp_smoke ==='
+            ./build-test/arsonkupik_dsp_smoke
+            echo "exit=$?"
+            echo
+            echo '=== arsonkupik_dsp_hardening ==='
+            ./build-test/arsonkupik_dsp_hardening
+            echo "exit=$?"
+            echo
+            echo '=== arsonkupik_transition_hardening ==='
+            ./build-test/arsonkupik_transition_hardening
+            echo "exit=$?"
+          } > docs/internal/p1-v0415-diagnostics.txt 2>&1
+          set -e
+      - name: Commit diagnostics
+        run: |
+          rm -f .github/p1-v0415-diagnostics.ready
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Capture v0.4.15 P1 test diagnostics"
+          git push origin HEAD:${GITHUB_HEAD_REF}
