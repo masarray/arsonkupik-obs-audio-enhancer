@@ -1,71 +1,123 @@
 # Audio quality standards
 
-ArSonKuPik OBS Audio Enhancer is designed as a real-time listening product, not as a volume trick. Changes to the DSP engine, presets, macro mapping, gain staging, or OBS wrapper should preserve the standards in this document.
+ArSonKuPik OBS Audio Enhancer is designed as a real-time listening product, not as a volume trick. Changes to the DSP engine, presets, macro mapping, gain staging, transition layer, or OBS wrapper must preserve the standards in this document.
 
 ## Product targets
 
-The public quality targets are:
+1. **Click-safe control movement** — moving a continuous control must not reset filter history, create zipper noise, or add a material discontinuity beyond the source derivative.
+2. **Stable preset and bypass transitions** — preset or bypass changes must not create a hard pop, click, or muted block remainder.
+3. **Practical CPU use** — steady-state processing must remain suitable for live OBS use, stop rebuilding after controls settle, and skip the creative chain after bypass becomes fully dry.
+4. **Stable dynamics** — enhancement must not create obvious full-band pumping, breathing, recovery wobble, or limiter chatter.
+5. **Calibrated loudness benefit** — moderate-level sources target an audible Filter ON benefit near 3 dB; hot mastered sources may produce a smaller lift to protect crest factor and avoid sustained limiting.
+6. **No clipping regression** — maintained test output must remain finite and below the configured sample ceiling.
+7. **Stereo integrity** — widening must preserve a stable center and useful mono compatibility; narrowing must move predictably toward mono.
+8. **Audible macro range** — Smart Bass, Smart Treble, Vocal Body, and Stereo Magic must produce clearly audible movement while retaining a useful neutral region.
 
-1. **Crackle-free control movement** — moving a continuous control must not reset filter history, create zipper noise, or add an audible discontinuity beyond the derivative already present in the source.
-2. **Stable preset changes** — switching presets must not create a hard pop or click, even when the preset changes DSP topology.
-3. **Practical CPU use** — steady-state audio processing must remain suitable for live OBS use and must not keep rebuilding or allocating after parameters have settled.
-4. **Stable dynamics** — enhancement must not create obvious full-band pumping, breathing, or recovery wobble on bass-heavy or transient material.
-5. **Calibrated loudness benefit** — the main listening target is a tasteful Filter ON benefit of roughly **3–4 dB** in the project smoke test, not an extreme hidden boost.
-6. **No clipping regression** — test output must remain finite and below full-scale sample clipping under the maintained smoke-test scenarios.
-7. **Stereo integrity** — widening must preserve a stable center and useful mono compatibility; narrowing must move predictably toward mono without phase instability.
-8. **Audible macro range** — Smart Bass, Smart Treble, Vocal Body, and Stereo Magic should produce a clearly audible min-to-max change while keeping the neutral region useful.
+These are engineering goals and regression gates, not an absolute guarantee for every driver, host configuration, device, or source.
+
+## Channel policy
+
+ArSonKuPik currently processes the stereo/front-left and front-right pair. On a multichannel source, channels after front L/R are passed through unchanged.
+
+This policy avoids applying:
+
+- unlinked gain reduction to center, LFE, or surround channels;
+- a front-only output lift while claiming full multichannel processing;
+- unvalidated bass management or channel remapping;
+- inconsistent limiting across a surround bed.
+
+A future multichannel mode must define channel grouping, linked detection, LFE policy, output ceilings, downmix behavior, and dedicated regression tests before it can replace this pass-through policy.
 
 ## DSP implementation rules
 
-Real-time DSP changes should follow these rules unless a pull request provides strong measurements and a documented reason to deviate:
+Real-time DSP changes should follow these rules unless measurements and listening evidence justify a deviation:
 
-- Do not clear or replace stateful filters merely because a coefficient changed.
-- Reuse existing filter stages when the topology is unchanged.
-- Smooth continuous user parameters before applying them to the DSP engine.
-- Apply coefficient changes at a controlled rate, normally once per audio block rather than once per mouse event.
+- Do not clear stateful filters merely because a coefficient changes.
+- Reuse filter stages when topology is unchanged.
+- Smooth continuous controls before applying them to DSP.
+- Apply coefficient changes at a controlled block rate.
+- Use subsystem dirty flags so unrelated EQ, color, width, compressor, limiter, or gain sections are not rebuilt.
 - Avoid heap allocation, file access, logging, locks, or unbounded work in the steady-state audio path.
 - Stop retuning after smoothed parameters reach their targets.
-- Mask unavoidable topology changes with a short click-safe transition.
+- Mask unavoidable preset topology changes with the shared transition processor.
+- Keep color, compressor, and width state warm through neutral positions; make their audible contribution reach zero through mix or gain rather than abrupt enable thresholds.
 - Clamp frequencies, Q values, gains, widths, ratios, times, and mixes to valid ranges.
-- Keep gain staging explicit. Do not hide a large output boost inside tonal macros.
-- Prefer linked and conservative dynamics when full-band processing can be driven by bass transients.
-- Preserve the original center image before adding side enhancement.
+- Keep gain staging explicit. Do not hide a large moving output gain inside tonal macros.
+- Preserve center information before adding side enhancement.
 
 ## Gain-staging policy
 
-The current engine uses internal creative-chain headroom before EQ, color, compressor, width, and output protection. Only part of that headroom is restored automatically.
+The engine uses fixed creative-chain headroom before EQ, color, compression, width, and output protection. Only part of that headroom is restored automatically.
 
 The intended result is:
 
-- Filter ON sounds more polished and engaging.
-- The audible improvement remains present at a controlled listening level.
-- The main preset does not jump tens of decibels above bypass.
-- Output Trim remains a user-controlled final adjustment rather than an implicit part of tonal macro mapping.
-- Smart protection and limiter behavior prevent clipping without becoming the primary loudness engine.
+- Filter ON sounds more polished and engaging;
+- moderate-level material receives the calibrated wow effect;
+- hot mastered material remains ceiling-safe without forcing an impossible constant +3 dB lift;
+- limiter gain reduction does not become the primary loudness engine;
+- Output Trim remains a user-controlled final adjustment.
 
-A louder result is not automatically a better result. Every listening review should include both:
+Every review must include both:
 
 1. **Native ON/OFF comparison** — confirms the intended product benefit.
-2. **Loudness-matched comparison** — checks whether tonal, spatial, and dynamic improvements remain after loudness bias is reduced.
+2. **Loudness-matched comparison** — confirms tonal, spatial, and dynamic improvements remain after loudness bias is reduced.
 
-## Crackle and automation validation
+## Multi-level loudness validation
 
-A control-automation test should:
+Every factory preset is tested at input peaks of:
 
-1. Generate or load a continuous signal with stable level.
-2. Process a static reference with unchanged controls.
-3. Process the same signal while aggressively sweeping each continuous control.
-4. Measure maximum sample-to-sample jump for the static and automated renders.
-5. Confirm that automation does not introduce non-finite samples or a materially larger discontinuity.
-6. Repeat while changing presets during active audio.
+```text
+-18 dBFS
+-12 dBFS
+ -6 dBFS
+ -3 dBFS
+ -1 dBFS
+```
 
-Recommended release gate:
+The matrix records:
 
-- automation jump ratio should remain close to the static reference and normally not exceed **1.10×** without a documented source-dependent explanation;
+- input and output RMS;
+- input and output sample peak;
+- RMS and peak benefit;
+- crest-factor loss;
+- 95th-percentile gain reduction;
+- finite output and clipping state.
+
+Moderate rows retain the calibrated loudness target. Hot rows allow the loudness benefit to decrease while enforcing output ceiling, crest-factor, and gain-reduction limits. A preset must not pass by flattening every transient against the limiter.
+
+## Control and transition validation
+
+The shared transition processor used by OBS must also be the implementation exercised by standalone tests.
+
+Test at least:
+
+- 44.1, 48, and 96 kHz;
+- 64, 128, 256, 480, and 1024-frame blocks;
+- all factory presets;
+- preset requests every 2, 10, and 20 ms;
+- bypass changes during active audio;
+- a new preset request while a prior transition is still active.
+
+Acceptance gates:
+
 - no NaN or infinity values;
-- no audible crackle, zipper noise, hard pop, or click in headphones and speakers.
+- no muted block remainder;
+- maximum discontinuity ratio normally no greater than 1.10× the static reference;
+- no allocation after initialization;
+- no channel mismatch in the processed stereo pair.
 
-This metric is a regression guard, not a complete perceptual model. A passing number does not override an audible failure.
+A passing metric does not override an audible click or dropout.
+
+## Selective-rebuild and hard-bypass validation
+
+Regression tests must confirm:
+
+- Stereo Magic changes rebuild only the width subsystem;
+- Output Trim changes update output gain and limiter configuration without rebuilding EQ, color, width, or compression;
+- bypass-only changes do not rebuild creative DSP configuration;
+- settled bypass produces sample-exact pass-through;
+- settled bypass performs no steady-state heap allocation;
+- leaving hard bypass resets and re-enters through the bypass smoother instead of exposing stale DSP state.
 
 ## Dynamics and pumping validation
 
@@ -77,159 +129,88 @@ Use material that exposes gain-envelope problems:
 - dense full-range program material;
 - spoken voice with pauses and plosives.
 
-Listen for:
+Listen for vocal or treble rocking after kicks, full-mix breathing, long recovery swells, limiter chatter, and stereo-image movement caused by asymmetric gain behavior.
 
-- the vocal or treble level rocking after every kick;
-- the whole mix audibly inhaling and exhaling;
-- long recovery swells after a loud transient;
-- limiter chatter or repeated brightness changes;
-- stereo image movement caused by linked or asymmetric gain behavior.
-
-The preferred correction order is:
+Preferred correction order:
 
 1. reduce unnecessary makeup gain;
-2. reduce full-band parallel mix or ratio;
+2. reduce full-band parallel density or ratio;
 3. adjust attack and release for calmer recovery;
-4. improve gain staging before adding more limiting;
-5. use source-aware or frequency-selective processing only when the simpler solution is insufficient.
+4. improve gain staging before adding limiting;
+5. add source-aware processing only when simpler corrections are insufficient.
 
-## CPU and real-time validation
-
-CPU quality is not defined by one machine or one percentage. A release should instead demonstrate that processing remains bounded and stable.
+## CPU validation
 
 Validate at least:
 
-- 44.1 kHz and 48 kHz;
-- mono and stereo sources;
-- continuous playback while moving controls;
+- 44.1 and 48 kHz normal operation;
+- continuous playback while moving one and several controls;
 - repeated preset changes;
 - multiple plugin instances when practical;
-- idle playback after all controls have settled.
+- idle playback after controls settle;
+- fully settled bypass.
 
-Reject a change when it causes:
+Reject a change when it causes dropouts, continuous rebuilds after controls stop, recurring steady-state allocation, avoidable per-sample calculations, or a large CPU increase without documented audible benefit.
 
-- audio dropouts or missed real-time deadlines;
-- continuous coefficient rebuilds after controls stop moving;
-- recurring allocation in steady state;
-- avoidable per-sample work that can be calculated per block;
-- a large CPU increase without a documented and audible benefit.
-
-Global oversampling is not the default solution. Any oversampling proposal must include an explicit quality benefit, CPU measurements, and a lower-cost comparison.
+Global oversampling is not the default solution. Any oversampling proposal requires explicit quality measurements, CPU data, and a lower-cost comparison.
 
 ## Stereo validation
 
-Test with:
-
-- true mono content;
-- centered vocal with stereo accompaniment;
-- already-wide commercial music;
-- strongly correlated left/right material;
-- headphones and speakers;
-- mono fold-down.
+Test true mono, centered vocal with stereo accompaniment, already-wide music, strongly correlated and inverted material, headphones, speakers, and mono fold-down.
 
 Acceptance criteria:
 
-- the center remains stable when widening;
-- a stereo source is not accidentally converted to mono at the neutral position;
-- the far-left Stereo Magic position reaches a predictable narrow or mono result;
-- the far-right position sounds wider without obvious phase swirl or hollow center;
-- mono fold-down does not reveal severe cancellation or unexpected tonal loss.
+- center remains stable during widening;
+- neutral position preserves the source stereo image;
+- far-left Stereo Magic narrows predictably;
+- far-right widens without obvious phase swirl or hollow center;
+- mono fold-down does not reveal severe cancellation.
 
 ## Macro-control validation
 
 For each macro, test `0 → 50 → 100 → 50` while audio is continuous.
 
-### Smart Bass
+- **Smart Bass:** cleanup must not sound thin or phasey; boost must not create uncontrolled low-frequency level or pumping.
+- **Smart Treble:** cleanup must not dull the source completely; boost must avoid brittle peaks and exaggerated sibilance.
+- **Vocal Body:** tuck and forward movement must remain predictable without honk or excessive output gain.
+- **Stereo Magic:** narrowing and widening must remain progressive and center-safe.
 
-- Left: rumble and mud cleanup should be audible without making the source thin or phasey.
-- Center: should remain a useful neutral reference.
-- Right: sub weight, body, and punch should increase without uncontrolled low-frequency level or compressor pumping.
-
-### Smart Treble
-
-- Left: de-harsh and de-ess behavior should smooth the source without dulling it completely.
-- Center: should remain neutral.
-- Right: air, presence, and sparkle should be audible without brittle peaks or exaggerated sibilance.
-
-### Vocal Body
-
-- Left: vocal should tuck and smooth predictably.
-- Center: should remain neutral.
-- Right: body, clarity, and forward presence should improve without honk, masking, or excessive output gain.
-
-### Stereo Magic
-
-- Left: should narrow predictably toward mono.
-- Center: should preserve the source stereo image.
-- Right: should widen progressively while protecting center focus and mono compatibility.
-
-## Maintained smoke-test expectations
-
-The standalone DSP smoke test is a fast regression screen. It should verify at minimum:
-
-- all maintained presets produce finite output;
-- clipping guards remain effective;
-- the main preset stays near its calibrated loudness target;
-- extreme hidden gain regressions fail the test;
-- representative presets continue to provide audible benefit;
-- DSP code builds on supported CI platforms.
-
-Run the standalone test with:
+## Maintained test commands
 
 ```bash
 cmake -S . -B build-test -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
 cmake --build build-test --config Release
-```
-
-On Linux:
-
-```bash
 ./build-test/arsonkupik_dsp_smoke
+./build-test/arsonkupik_dsp_hardening
+./build-test/arsonkupik_transition_hardening
 ```
 
-On a multi-configuration Windows generator, the executable is normally under `build-test/Release/`.
+On a multi-configuration Windows generator, executables are normally under `build-test/Release/`.
 
-## Listening-test protocol
-
-Use the same source, source fader, monitoring path, and sample rate throughout a comparison.
+## Listening-test record
 
 Document:
 
-- ArSonKuPik version;
-- OBS Studio version;
-- operating system;
-- sample rate;
-- source type;
-- exact preset;
-- all macro values;
-- Smart Protect state;
-- Output Trim;
-- bypass and filter states;
-- observed input and output peaks;
-- whether the comparison was loudness matched;
+- ArSonKuPik and OBS Studio versions;
+- operating system and sample rate;
+- source type and channel layout;
+- preset and macro values;
+- Smart Protect, Output Trim, bypass, and filter state;
+- observed peaks and whether the comparison was loudness-matched;
 - headphones, speakers, or both.
 
-Use several source types before changing a global preset or engine coefficient. A correction that helps one song but damages speech, mono content, or already-wide sources is not a global improvement.
+Use several source types before changing a global preset or engine coefficient.
 
 ## Release quality gate
 
 Before a DSP-affecting release:
 
-- [ ] Windows CI build passes.
-- [ ] Linux plugin build passes.
-- [ ] Standalone DSP smoke test passes.
-- [ ] Continuous control sweeps are audibly crackle-free.
-- [ ] Preset switching is free of hard pops and clicks.
-- [ ] Filter ON gain remains within the documented target for the main preset.
-- [ ] Bass-heavy material does not produce obvious full-band pumping.
-- [ ] Stereo widening preserves center focus and acceptable mono fold-down.
-- [ ] CPU remains stable during automation and after parameters settle.
-- [ ] Release notes describe any intentional audible change.
-
-## Reporting an audio-quality problem
-
-Use the dedicated **Audio quality report** issue form and include the exact settings, source type, sample rate, reproduction steps, and ON/bypass observations:
-
-https://github.com/masarray/arsonkupik-obs-audio-enhancer/issues/new/choose
-
-Do not upload copyrighted material unless you have permission to share it. A short original or licensed test sample is preferred.
+- [ ] multi-level loudness matrix passes;
+- [ ] realtime hardening passes;
+- [ ] preset and bypass transition hardening passes;
+- [ ] selective rebuild and hard-bypass tests pass;
+- [ ] Windows native plugin build passes against the pinned OBS dependency;
+- [ ] Linux plugin build passes;
+- [ ] native OBS listening checks pass;
+- [ ] tag, CMake version, release notes, and website version metadata agree;
+- [ ] release artifacts include build metadata and SHA-256 checksums.
