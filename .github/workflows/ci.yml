@@ -23,7 +23,7 @@ jobs:
           if (-not $vsInstall) { throw 'Visual Studio C++ toolchain was not found.' }
           $vsDevCmd = Join-Path $vsInstall 'Common7\Tools\VsDevCmd.bat'
           $script = Join-Path $PWD 'scripts\build-windows-from-obs-release.ps1'
-          cmd /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 && powershell -NoProfile -ExecutionPolicy Bypass -File `"$script`" -OBSVersion latest"
+          cmd /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 && powershell -NoProfile -ExecutionPolicy Bypass -File `"$script`" -OBSVersion pinned"
       - name: Upload Windows package artifact
         uses: actions/upload-artifact@v4
         with:
