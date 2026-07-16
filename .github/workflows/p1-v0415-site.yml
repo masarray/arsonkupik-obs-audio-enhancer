@@ -1,0 +1,60 @@
+name: Update v0.4.15 site metadata
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/p1-v0415-site.ready'
+
+permissions:
+  contents: write
+
+jobs:
+  update-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Update landing-page claims and version metadata
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('docs/site/index.html')
+          text = p.read_text(encoding='utf-8')
+          replacements = {
+            'ArSonKuPik OBS Audio Enhancer — Smart, Crackle-Free Audio Filter': 'ArSonKuPik OBS Audio Enhancer — Smart, Regression-Tested Audio Filter',
+            'Get polished sound, audible macro controls, stable gain, crackle-free adjustment, and practical CPU use on Windows and Linux.': 'Get polished sound, audible macro controls, stable gain, regression-tested transitions, and practical CPU use on Windows and Linux.',
+            'crackle free audio plugin': 'click safe audio plugin',
+            'Smart, crackle-free audio enhancement for OBS Studio with audible macro controls, calibrated loudness, stable dynamics, and practical CPU use.': 'Smart audio enhancement for OBS Studio with regression-tested transitions, calibrated loudness, stable dynamics, and practical CPU use.',
+            'Free open-source smart audio enhancement for OBS Studio — polished, crackle-free, stable, and CPU-conscious.': 'Free open-source smart audio enhancement for OBS Studio — polished, regression-tested, stable, and CPU-conscious.',
+            '"softwareVersion": "0.4.12"': '"softwareVersion": "0.4.15"',
+            'with audible macro controls, crackle-free parameter adjustment, calibrated gain staging, stable dynamics, and practical CPU use.': 'with audible macro controls, regression-tested parameter and preset transitions, calibrated gain staging, stable dynamics, and practical CPU use.',
+            'The DSP direction prioritizes crackle-free parameter movement, stable dynamics, practical CPU use, and no mandatory global oversampling.': 'The DSP direction prioritizes click-safe parameter movement, tested preset and bypass transitions, stable dynamics, practical CPU use, and no mandatory global oversampling.',
+            '<li>Crackle-free smoothed parameter movement</li>': '<li>Regression-tested smoothed parameter movement</li>',
+            '<div><strong>Crackle-free</strong><span>State-preserving DSP updates</span></div>': '<div><strong>Regression-tested</strong><span>State-preserving DSP transitions</span></div>',
+            '<div><strong>Crackle-free movement</strong><span>State-preserving biquad retuning and block-level smoothing</span></div>': '<div><strong>Click-safe movement</strong><span>State-preserving biquad retuning and shared transition tests</span></div>',
+            '<div><strong>Practical CPU profile</strong><span>Dirty-apply updates stop retuning after parameters settle</span></div>': '<div><strong>Practical CPU profile</strong><span>Selective rebuilds and a settled hard-bypass fast path</span></div>',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Expected landing-page text not found: {old}')
+              text = text.replace(old, new, 1)
+          if '0.4.12' in text:
+              raise SystemExit('Outdated 0.4.12 metadata remains in index.html')
+          p.write_text(text, encoding='utf-8')
+          Path('.github/p1-v0415-site.ready').unlink(missing_ok=True)
+          Path('.github/workflows/p1-v0415-site.yml').unlink()
+      - name: Validate HTML metadata
+        run: |
+          grep -q '"softwareVersion": "0.4.15"' docs/site/index.html
+          grep -q 'Regression-Tested Audio Filter' docs/site/index.html
+          test "$(grep -c '0.4.12' docs/site/index.html || true)" = "0"
+      - name: Commit landing-page update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Update landing page for v0.4.15"
+          git push origin HEAD:${GITHUB_HEAD_REF}
