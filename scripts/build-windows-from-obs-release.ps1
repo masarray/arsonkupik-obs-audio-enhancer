@@ -1,5 +1,5 @@
 param(
-  [string]$OBSVersion = "latest",
+  [string]$OBSVersion = "pinned",
   [string]$BuildDir = "build-obs-release",
   [string]$Config = "Release",
   [string]$DepsDir = ".deps",
@@ -48,6 +48,18 @@ function Write-ObsConfigStub {
 $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 try {
+  if ($OBSVersion -eq "pinned") {
+    $versionFile = Join-Path $root "cmake\OBS_VERSION.txt"
+    if (-not (Test-Path $versionFile)) {
+      throw "Pinned OBS version file was not found: $versionFile"
+    }
+    $OBSVersion = (Get-Content -Raw $versionFile).Trim()
+    if ([string]::IsNullOrWhiteSpace($OBSVersion)) {
+      throw "Pinned OBS version file is empty: $versionFile"
+    }
+    Write-Host "Using pinned OBS Studio version: $OBSVersion"
+  }
+
   if ([string]::IsNullOrWhiteSpace($CMakeExe)) {
     $cmakeCmd = Get-Command cmake -ErrorAction SilentlyContinue
     if (-not $cmakeCmd) {
@@ -96,11 +108,11 @@ try {
         Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $portableZip
       }
     } else {
-      if ($tag -notmatch '^v') { $tagForUrl = $tag } else { $tagForUrl = $tag }
+      $tagForUrl = $tag
       $guessName = "OBS-Studio-$tagForUrl-Windows-x64.zip"
       $portableZip = Join-Path $downloads $guessName
       if (-not (Test-Path $portableZip)) {
-        Write-Host "Downloading OBS portable guess: $guessName"
+        Write-Host "Downloading pinned OBS portable: $guessName"
         Invoke-WebRequest -Uri "https://github.com/obsproject/obs-studio/releases/download/$tagForUrl/$guessName" -OutFile $portableZip
       }
     }
@@ -186,6 +198,7 @@ try {
   Write-Host "DONE. Ready-to-copy package:"
   Write-Host "  $root\package-programdata\arsonkupik-obs-audio-enhancer"
   Write-Host ""
+  Write-Host "OBS dependency version: $tag"
   Write-Host "Zip it for distribution or copy this folder to:"
   Write-Host "  C:\ProgramData\obs-studio\plugins\"
 } finally {
