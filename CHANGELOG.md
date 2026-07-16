@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+### Changed
+- Replaced the OBS-only transition implementation with a shared, allocation-free preset and bypass transition processor used by both the plugin wrapper and standalone regression tests.
+- Added an OBS-equivalent rapid transition matrix covering all factory presets, bypass changes, 44.1/48/96 kHz sample rates, 64–1024 frame blocks, and 2–20 ms preset request intervals.
+- Expanded preset loudness validation from one moderate synthetic level to a five-level matrix from -18 dBFS through -1 dBFS, including RMS benefit, peak ceiling, crest-factor loss, gain-reduction, and finite-output gates.
+- Made factory EQ identifiers static metadata so preset copies do not allocate strings on the realtime audio thread.
+
 ## [0.4.14] - 2026-07-15
 ### Changed
 - Strengthened the macro response curves at moderate factory-preset values so restrained presets sound more clearly enhanced without changing the neutral point or the 0/100 endpoints.
@@ -48,35 +55,3 @@ All notable changes to this project are documented here.
 ## [0.4.9] - 2026-07-08
 ### Fixed
 - Fixed crackle/zipper noise when OBS sliders are moved while audio is running.
-- Reworked EQ rebuild to preserve existing biquad history and only retune coefficients during normal knob automation.
-- Replaced Butterworth Q allocation with static tables so repeated retunes do not allocate in the audio path.
-- Added 80 ms block-level smoothing for continuous OBS macro controls.
-- Added equal-power preset-switch fade around topology changes to avoid pop/click when changing presets.
-
-## [0.4.5] - 2026-07-07
-### Fixed
-- Fixed Linux release workflow link error by enabling position-independent code for the static DSP library.
-- Added Linux plugin build smoke test to CI.
-- Set Linux CMake release configuration explicitly.
-
-## [0.4.4] - 2026-07-07
-### Changed
-- Cleaned public repository helper scripts.
-- Kept only the Windows batch files that are actually useful for normal local use:
-  - `build_plugin_single_click.bat`
-  - `install_plugin_windows.bat`
-  - `scripts/find-cmake.bat` because the build helper uses it internally
-- Improved Windows installer logic so the standard OBS plugin folder can already exist without producing a confusing warning.
-- Installer now detects a typical OBS installation and installs into the standard ProgramData plugin path.
-- Confirmed project licensing as GPL-3.0.
-
-## [0.4.3] - 2026-07-07
-### Added
-- Public release automation for Windows installer, Windows ZIP, and Linux package artifacts.
-- GitHub Pages landing site and README assets.
-- Public, user-facing release notes.
-
-### Changed
-- Repository cleaned up for public presentation.
-- README rewritten for public users and contributors.
-- Project license updated to GPL-3.0.
