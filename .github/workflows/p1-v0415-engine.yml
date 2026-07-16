@@ -1,0 +1,338 @@
+name: Apply v0.4.15 P1 engine hardening
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/p1-v0415-engine.ready'
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply P1 engine changes
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          def read(path):
+              return Path(path).read_text(encoding='utf-8')
+
+          def write(path, text):
+              Path(path).write_text(text, encoding='utf-8')
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'Expected block not found: {label}')
+              return text.replace(old, new, 1)
+
+          # Header: calibrated trim belongs to the preset, defaults come from MasAri,
+          # debug counters verify selective rebuilds, and hard bypass has explicit state.
+          path = 'include/arsonkupik_dsp.hpp'
+          text = read(path)
+          text = replace_once(text,
+              '''    OutputConfig output;\n    MacroConfig macro;\n};''',
+              '''    OutputConfig output;\n    MacroConfig macro;\n    double calibrated_wow_trim_db = 0.0;\n};''',
+              'Preset calibrated trim')
+          text = text.replace('double enhance = 65.0;', 'double enhance = 78.0;')
+          text = text.replace('double smart_bass = 55.0;', 'double smart_bass = 68.0;')
+          text = text.replace('double smart_treble = 70.0;', 'double smart_treble = 80.0;')
+          text = text.replace('double vocal_body = 65.0;', 'double vocal_body = 76.0;')
+          text = text.replace('double stereo_magic = 85.0;', 'double stereo_magic = 88.0;')
+          text = text.replace('double output_trim_db = -0.55;', 'double output_trim_db = 0.35;')
+          text = replace_once(text,
+              '''struct EngineParams {\n    std::uint32_t preset_index = 0;\n    double enhance = 78.0;\n    double smart_bass = 68.0;\n    double smart_treble = 80.0;\n    double vocal_body = 76.0;\n    double stereo_magic = 88.0;\n    double output_trim_db = 0.35;\n    bool smart_protect = true;\n    bool bypass = false;\n    bool advanced_override = false;\n};''',
+              '''struct EngineParams {\n    std::uint32_t preset_index = 0;\n    double enhance = 78.0;\n    double smart_bass = 68.0;\n    double smart_treble = 80.0;\n    double vocal_body = 76.0;\n    double stereo_magic = 88.0;\n    double output_trim_db = 0.35;\n    bool smart_protect = true;\n    bool bypass = false;\n    bool advanced_override = false;\n};\n\nRuntimeParams default_runtime_params();\nEngineParams default_engine_params();''',
+              'default parameter factories')
+          text = replace_once(text,
+              '''struct MeterState {\n    double input_peak_db = -120.0;\n    double output_peak_db = -120.0;\n    double gain_reduction_db = 0.0;\n    double correlation = 1.0;\n    bool clipping = false;\n};''',
+              '''struct MeterState {\n    double input_peak_db = -120.0;\n    double output_peak_db = -120.0;\n    double gain_reduction_db = 0.0;\n    double correlation = 1.0;\n    bool clipping = false;\n};\n\nstruct EngineDebugCounters {\n    std::uint64_t eq_rebuilds = 0;\n    std::uint64_t color_rebuilds = 0;\n    std::uint64_t width_rebuilds = 0;\n    std::uint64_t compressor_updates = 0;\n    std::uint64_t limiter_updates = 0;\n    std::uint64_t gain_updates = 0;\n    std::uint64_t hard_bypass_blocks = 0;\n};''',
+              'engine debug counters')
+          text = replace_once(text,
+              '''    const MeterState& meters() const { return meters_; }\n    const Preset& current_preset() const { return *preset_; }''',
+              '''    const MeterState& meters() const { return meters_; }\n    const Preset& current_preset() const { return *preset_; }\n    const EngineDebugCounters& debug_counters() const { return debug_counters_; }''',
+              'debug counter accessor')
+          text = text.replace('void rebuild_from_preset();', 'void rebuild_all_processors();')
+          text = replace_once(text,
+              '''    DynamicsProcessor compressor_;\n    LimiterProcessor limiter_;\n    OnePoleSmoother bypass_smooth_;''',
+              '''    DynamicsProcessor compressor_;\n    LimiterProcessor limiter_;\n    OnePoleSmoother bypass_smooth_;\n    bool hard_bypass_active_ = false;\n    EngineDebugCounters debug_counters_{};''',
+              'hard bypass state')
+          write(path, text)
+
+          # Presets: store calibration by stable preset identity and expose one source
+          # of truth for public/default API parameters.
+          path = 'src/arsonkupik_presets.cpp'
+          text = read(path)
+          default_line = '    presets.push_back(base("default", "MasAri", "Golden reference: bass bulat bernapas, stereo magic luas, airy silky treble, ear-tickle detail."));'
+          text = replace_once(text, default_line,
+              '''    {\n        auto p = base("default", "MasAri", "Golden reference: bass bulat bernapas, stereo magic luas, airy silky treble, ear-tickle detail.");\n        p.calibrated_wow_trim_db = 1.05;\n        presets.push_back(p);\n    }''',
+              'default preset calibration')
+          trims = {
+              'mastering': 3.60,
+              'max-enhancer': 2.35,
+              'sonkuhoreg': 0.42,
+              'sonkubattle': -0.48,
+              'sonkubalap': 0.06,
+              'audiophile-pop': 4.40,
+              'pro-music': 1.95,
+              'open-air-field': 3.45,
+              'movie-dolby': 5.58,
+              'podcast': 4.60,
+              'night-listening': 8.92,
+          }
+          for preset_id, trim in trims.items():
+              pattern = rf'(        auto p = base\("{re.escape(preset_id)}",[^\n]+\);\n)'
+              replacement = rf'\1        p.calibrated_wow_trim_db = {trim:.2f};\n'
+              text, count = re.subn(pattern, replacement, text, count=1)
+              if count != 1:
+                  raise SystemExit(f'Preset base line not found for {preset_id}')
+          text = replace_once(text,
+              '''const Preset& default_preset()\n{\n    const Preset* p = find_preset("default");\n    return p ? *p : factory_presets().front();\n}\n\n} // namespace arsonkupik''',
+              '''const Preset& default_preset()\n{\n    const Preset* p = find_preset("default");\n    return p ? *p : factory_presets().front();\n}\n\nRuntimeParams default_runtime_params()\n{\n    const auto& p = default_preset();\n    RuntimeParams params;\n    params.preset_id = p.id;\n    params.enhance = p.macro.enhance;\n    params.smart_bass = p.macro.smart_bass;\n    params.smart_treble = p.macro.smart_treble;\n    params.vocal_body = p.macro.vocal_body;\n    params.stereo_magic = p.macro.stereo_magic;\n    params.output_trim_db = p.output.output_gain_db;\n    params.smart_protect = p.macro.smart_protect;\n    params.bypass = false;\n    params.advanced_override = false;\n    return params;\n}\n\nEngineParams default_engine_params()\n{\n    const auto& p = default_preset();\n    EngineParams params;\n    params.preset_index = static_cast<std::uint32_t>(preset_index_from_id(p.id));\n    params.enhance = p.macro.enhance;\n    params.smart_bass = p.macro.smart_bass;\n    params.smart_treble = p.macro.smart_treble;\n    params.vocal_body = p.macro.vocal_body;\n    params.stereo_magic = p.macro.stereo_magic;\n    params.output_trim_db = p.output.output_gain_db;\n    params.smart_protect = p.macro.smart_protect;\n    params.bypass = false;\n    params.advanced_override = false;\n    return params;\n}\n\n} // namespace arsonkupik''',
+              'default parameter factory definitions')
+          write(path, text)
+
+          # Macro mapping: remove order-dependent trim table, keep effect processors
+          # warm at neutral, and instrument subsystem rebuilds.
+          path = 'src/arsonkupik_dsp_macros.cpp'
+          text = read(path)
+          pattern = re.compile(r'\n// Fixed, source-independent calibration\..*?double preset_wow_trim_db\(std::size_t preset_index\)\n\{\n    return preset_index < kPresetWowTrimDb\.size\(\) \? kPresetWowTrimDb\[preset_index\] : 0\.0;\n\}\n', re.S)
+          text, count = pattern.subn('\n', text, count=1)
+          if count != 1:
+              raise SystemExit('Order-dependent wow trim table not found')
+          text = replace_once(text,
+              '    working_.color.enabled = colorActivation > 0.006 || bassClean > 0.015 || trebleClean > 0.015 || vocalTuck > 0.015;',
+              '    working_.color.enabled = true; // keep filter state warm; mix reaches zero at neutral',
+              'color hard threshold')
+          text = replace_once(text,
+              '    working_.compressor.enabled = enhance > 0.006 || vocal > 0.006;',
+              '    working_.compressor.enabled = true; // zero parallel mix is the neutral state',
+              'compressor hard threshold')
+          text = replace_once(text,
+              '    working_.width.enabled = std::abs(stereoBip) > 0.006;',
+              '    working_.width.enabled = true; // keep M/S analysis and filter history warm',
+              'width hard threshold')
+          text = replace_once(text,
+              '''    } else if (stereoWide > 0.006) {\n        working_.width.mix = clamp(30.0 + 68.0 * stereoWide, 0.0, 100.0);\n        working_.width.width = clamp(100.0 + 100.0 * stereoWide, 100.0, 200.0);\n        working_.width.low_mid_width = clamp(100.0 + 22.0 * stereoWide, 100.0, 135.0);\n        working_.width.mid_width = clamp(100.0 + 50.0 * stereoWide, 100.0, 168.0);\n        working_.width.high_width = clamp(100.0 + 116.0 * stereoWide, 100.0, 224.0);\n        working_.width.source_protect = clamp(78.0 - 12.0 * stereoWide, 58.0, 96.0);\n        working_.width.side_tone = clamp(0.6 + 3.8 * stereoWide, 0.0, 5.0);\n    }''',
+              '''    } else if (stereoWide > 0.006) {\n        working_.width.mix = clamp(30.0 + 68.0 * stereoWide, 0.0, 100.0);\n        working_.width.width = clamp(100.0 + 100.0 * stereoWide, 100.0, 200.0);\n        working_.width.low_mid_width = clamp(100.0 + 22.0 * stereoWide, 100.0, 135.0);\n        working_.width.mid_width = clamp(100.0 + 50.0 * stereoWide, 100.0, 168.0);\n        working_.width.high_width = clamp(100.0 + 116.0 * stereoWide, 100.0, 224.0);\n        working_.width.source_protect = clamp(78.0 - 12.0 * stereoWide, 58.0, 96.0);\n        working_.width.side_tone = clamp(0.6 + 3.8 * stereoWide, 0.0, 5.0);\n    } else {\n        working_.width.mix = 0.0;\n        working_.width.width = 100.0;\n        working_.width.low_mid_width = 100.0;\n        working_.width.mid_width = 100.0;\n        working_.width.high_width = 100.0;\n        working_.width.source_protect = 100.0;\n        working_.width.side_tone = 0.0;\n    }''',
+              'neutral width state')
+          text = replace_once(text,
+              '                                   + preset_wow_trim_db(params_.preset_index)',
+              '                                   + preset_->calibrated_wow_trim_db',
+              'stable preset calibration lookup')
+          text = text.replace('void ArSonKuPikEngine::rebuild_from_preset()', 'void ArSonKuPikEngine::rebuild_all_processors()')
+          text = replace_once(text,
+              '''    rebuild_width_filters();\n    compressor_.set_config(working_.compressor);\n    limiter_.set_config(working_.output);''',
+              '''    rebuild_width_filters();\n    compressor_.set_config(working_.compressor);\n    ++debug_counters_.compressor_updates;\n    limiter_.set_config(working_.output);\n    ++debug_counters_.limiter_updates;\n    update_cached_gains();''',
+              'full processor rebuild counters')
+          text = text.replace('void ArSonKuPikEngine::rebuild_eq()\n{', 'void ArSonKuPikEngine::rebuild_eq()\n{\n    ++debug_counters_.eq_rebuilds;')
+          text = text.replace('void ArSonKuPikEngine::update_cached_gains()\n{', 'void ArSonKuPikEngine::update_cached_gains()\n{\n    ++debug_counters_.gain_updates;')
+          text = text.replace('void ArSonKuPikEngine::rebuild_color_filters()\n{', 'void ArSonKuPikEngine::rebuild_color_filters()\n{\n    ++debug_counters_.color_rebuilds;')
+          text = text.replace('void ArSonKuPikEngine::rebuild_width_filters()\n{', 'void ArSonKuPikEngine::rebuild_width_filters()\n{\n    ++debug_counters_.width_rebuilds;')
+          write(path, text)
+
+          # Core engine: one source of defaults and subsystem-level dirty application.
+          path = 'src/arsonkupik_dsp.cpp'
+          text = read(path)
+          text = replace_once(text,
+              '''ArSonKuPikEngine::ArSonKuPikEngine()\n{\n    preset_ = &default_preset();\n    working_.eq.reserve(kMaxEqStages);\n    load_working_from_preset();\n    update_cached_gains();\n}''',
+              '''ArSonKuPikEngine::ArSonKuPikEngine()\n{\n    params_ = default_engine_params();\n    preset_ = &preset_at_index(params_.preset_index);\n    working_.eq.reserve(kMaxEqStages);\n    load_working_from_preset();\n    apply_macros();\n    update_cached_gains();\n}''',
+              'engine constructor defaults')
+          text = replace_once(text,
+              '''    compressor_.prepare(sample_rate_, working_.compressor);\n    limiter_.prepare(sample_rate_, working_.output);\n    rebuild_from_preset();\n    reset();''',
+              '''    compressor_.prepare(sample_rate_, working_.compressor);\n    ++debug_counters_.compressor_updates;\n    limiter_.prepare(sample_rate_, working_.output);\n    ++debug_counters_.limiter_updates;\n    rebuild_eq();\n    rebuild_color_filters();\n    rebuild_width_filters();\n    update_cached_gains();\n    reset();''',
+              'prepare subsystem initialization')
+          old = '''void ArSonKuPikEngine::set_realtime_params(const EngineParams& params)\n{\n    params_ = params;\n    preset_ = &preset_at_index(params_.preset_index);\n    load_working_from_preset();\n    apply_macros();\n    rebuild_from_preset();\n    update_cached_gains();\n}'''
+          new = '''void ArSonKuPikEngine::set_realtime_params(const EngineParams& params)\n{\n    const EngineParams previous = params_;\n    const auto changed = [](double a, double b, double epsilon) {\n        return std::abs(a - b) > epsilon;\n    };\n\n    const bool preset_changed = previous.preset_index != params.preset_index;\n    const bool override_changed = previous.advanced_override != params.advanced_override;\n    const bool enhance_changed = changed(previous.enhance, params.enhance, 0.0001);\n    const bool bass_changed = changed(previous.smart_bass, params.smart_bass, 0.0001);\n    const bool treble_changed = changed(previous.smart_treble, params.smart_treble, 0.0001);\n    const bool vocal_changed = changed(previous.vocal_body, params.vocal_body, 0.0001);\n    const bool stereo_changed = changed(previous.stereo_magic, params.stereo_magic, 0.0001);\n    const bool trim_changed = changed(previous.output_trim_db, params.output_trim_db, 0.0001);\n    const bool protect_changed = previous.smart_protect != params.smart_protect;\n    const bool leaving_hard_bypass = hard_bypass_active_ && previous.bypass && !params.bypass;\n\n    const bool full = preset_changed || override_changed;\n    const bool tonal = full || enhance_changed || bass_changed || treble_changed || vocal_changed;\n    const bool compressor_dirty = full || enhance_changed || vocal_changed;\n    const bool width_dirty = full || stereo_changed;\n    const bool output_dirty = full || enhance_changed || bass_changed || treble_changed\n                           || vocal_changed || trim_changed || protect_changed;\n    const bool dsp_dirty = tonal || compressor_dirty || width_dirty || output_dirty;\n\n    params_ = params;\n    if (preset_changed) preset_ = &preset_at_index(params_.preset_index);\n\n    if (dsp_dirty) {\n        load_working_from_preset();\n        apply_macros();\n        if (tonal) {\n            rebuild_eq();\n            rebuild_color_filters();\n        }\n        if (compressor_dirty) {\n            compressor_.set_config(working_.compressor);\n            ++debug_counters_.compressor_updates;\n        }\n        if (width_dirty) rebuild_width_filters();\n        if (output_dirty) {\n            limiter_.set_config(working_.output);\n            ++debug_counters_.limiter_updates;\n            update_cached_gains();\n        }\n    }\n\n    if (leaving_hard_bypass) {\n        reset();\n        bypass_smooth_.reset(1.0);\n        hard_bypass_active_ = false;\n    }\n}'''
+          text = replace_once(text, old, new, 'selective realtime parameter application')
+          text = replace_once(text,
+              '''    bypass_smooth_.reset(params_.bypass ? 1.0 : 0.0);\n    compressor_.reset(); limiter_.reset();''',
+              '''    bypass_smooth_.reset(params_.bypass ? 1.0 : 0.0);\n    hard_bypass_active_ = params_.bypass;\n    compressor_.reset(); limiter_.reset();''',
+              'reset hard bypass state')
+          write(path, text)
+
+          # Processing: keep neutral processors warm and use a true hard-bypass block path.
+          path = 'src/arsonkupik_dsp_processing.cpp'
+          text = read(path)
+          text = text.replace('    if (!c.enabled || c.mix <= 0.0) return {l, r};',
+                              '    if (!c.enabled) return {l, r};')
+          text = text.replace('    if (!w.enabled || w.mix <= 0.0) return {l, r};',
+                              '    if (!w.enabled) return {l, r};')
+          marker = '''    channels = std::min<std::size_t>(channels, channels_);\n    if (channels == 0 || !planes[0]) return;\n\n    const double bypass_t = params_.bypass ? 1.0 : 0.0;'''
+          replacement = '''    channels = std::min<std::size_t>(channels, channels_);\n    if (channels == 0 || !planes[0]) return;\n\n    if (!params_.bypass) hard_bypass_active_ = false;\n    if (hard_bypass_active_ && params_.bypass) {\n        double block_peak = 0.0;\n        double corr_lr = 0.0;\n        double corr_l2 = 0.0;\n        double corr_r2 = 0.0;\n        for (std::size_t i = 0; i < frames; ++i) {\n            const double l = planes[0][i];\n            const double r = channels > 1 && planes[1] ? planes[1][i] : l;\n            block_peak = std::max(block_peak, std::max(std::abs(l), std::abs(r)));\n            corr_lr += l * r;\n            corr_l2 += l * l;\n            corr_r2 += r * r;\n        }\n        const double inv_frames = 1.0 / static_cast<double>(frames);\n        update_meters_block(block_peak, block_peak, 0.0,\n                            corr_lr * inv_frames, corr_l2 * inv_frames,\n                            corr_r2 * inv_frames, frames);\n        ++debug_counters_.hard_bypass_blocks;\n        return;\n    }\n\n    const double bypass_t = params_.bypass ? 1.0 : 0.0;'''
+          text = replace_once(text, marker, replacement, 'hard bypass fast path')
+          text = replace_once(text,
+              '''        const double bypass = bypass_smooth_.process(bypass_t);\n        l = sane(static_cast<float>(static_cast<double>(l) * (1.0 - bypass) + static_cast<double>(original[0]) * bypass));''',
+              '''        const double bypass = bypass_smooth_.process(bypass_t);\n        if (params_.bypass && bypass >= 0.9995) hard_bypass_active_ = true;\n        l = sane(static_cast<float>(static_cast<double>(l) * (1.0 - bypass) + static_cast<double>(original[0]) * bypass));''',
+              'hard bypass settle detection')
+          write(path, text)
+
+          # Tests: verify one source of defaults, selective dirty rebuilds, and exact
+          # settled bypass pass-through with no steady-state allocation.
+          path = 'tests/dsp_hardening_test.cpp'
+          text = read(path)
+          insertion = r'''
+
+bool test_defaults_and_selective_rebuilds()
+{
+    using namespace arsonkupik;
+    const auto& preset = default_preset();
+    EngineParams params = default_engine_params();
+    const bool defaults_match = params.preset_index == preset_index_from_id(preset.id)
+        && std::abs(params.enhance - preset.macro.enhance) < 1.0e-9
+        && std::abs(params.smart_bass - preset.macro.smart_bass) < 1.0e-9
+        && std::abs(params.smart_treble - preset.macro.smart_treble) < 1.0e-9
+        && std::abs(params.vocal_body - preset.macro.vocal_body) < 1.0e-9
+        && std::abs(params.stereo_magic - preset.macro.stereo_magic) < 1.0e-9
+        && std::abs(params.output_trim_db - preset.output.output_gain_db) < 1.0e-9;
+
+    ArSonKuPikEngine engine;
+    engine.set_realtime_params(params);
+    engine.prepare(48000.0, 2);
+    const auto baseline = engine.debug_counters();
+
+    EngineParams stereo = params;
+    stereo.stereo_magic += 1.0;
+    engine.set_realtime_params(stereo);
+    const auto after_stereo = engine.debug_counters();
+    const bool stereo_only = after_stereo.width_rebuilds == baseline.width_rebuilds + 1
+        && after_stereo.eq_rebuilds == baseline.eq_rebuilds
+        && after_stereo.color_rebuilds == baseline.color_rebuilds
+        && after_stereo.compressor_updates == baseline.compressor_updates
+        && after_stereo.limiter_updates == baseline.limiter_updates
+        && after_stereo.gain_updates == baseline.gain_updates;
+
+    EngineParams trim = stereo;
+    trim.output_trim_db += 0.1;
+    engine.set_realtime_params(trim);
+    const auto after_trim = engine.debug_counters();
+    const bool trim_only = after_trim.eq_rebuilds == after_stereo.eq_rebuilds
+        && after_trim.color_rebuilds == after_stereo.color_rebuilds
+        && after_trim.width_rebuilds == after_stereo.width_rebuilds
+        && after_trim.compressor_updates == after_stereo.compressor_updates
+        && after_trim.limiter_updates == after_stereo.limiter_updates + 1
+        && after_trim.gain_updates == after_stereo.gain_updates + 1;
+
+    EngineParams bypass = trim;
+    bypass.bypass = true;
+    engine.set_realtime_params(bypass);
+    const auto after_bypass = engine.debug_counters();
+    const bool bypass_no_rebuild = after_bypass.eq_rebuilds == after_trim.eq_rebuilds
+        && after_bypass.color_rebuilds == after_trim.color_rebuilds
+        && after_bypass.width_rebuilds == after_trim.width_rebuilds
+        && after_bypass.compressor_updates == after_trim.compressor_updates
+        && after_bypass.limiter_updates == after_trim.limiter_updates
+        && after_bypass.gain_updates == after_trim.gain_updates;
+
+    std::cout << "defaults_match=" << defaults_match
+              << " stereo_only=" << stereo_only
+              << " trim_only=" << trim_only
+              << " bypass_no_rebuild=" << bypass_no_rebuild << "\n";
+    return defaults_match && stereo_only && trim_only && bypass_no_rebuild;
+}
+
+bool test_hard_bypass_passthrough()
+{
+    using namespace arsonkupik;
+    constexpr double sr = 48000.0;
+    constexpr std::size_t block = 256;
+    std::vector<float> l(block), r(block), source_l(block), source_r(block);
+    for (std::size_t i = 0; i < block; ++i) {
+        source_l[i] = static_cast<float>(0.18 * std::sin(2.0 * kPi * 997.0 * i / sr));
+        source_r[i] = static_cast<float>(0.16 * std::sin(2.0 * kPi * 733.0 * i / sr + 0.2));
+    }
+
+    EngineParams params = default_engine_params();
+    ArSonKuPikEngine engine;
+    engine.set_realtime_params(params);
+    engine.prepare(sr, 2);
+    params.bypass = true;
+    engine.set_realtime_params(params);
+
+    for (int n = 0; n < 140; ++n) {
+        l = source_l;
+        r = source_r;
+        float* planes[2] = {l.data(), r.data()};
+        engine.process(planes, 2, block);
+    }
+
+    g_allocations.store(0, std::memory_order_relaxed);
+    double max_error = 0.0;
+    for (int n = 0; n < 100; ++n) {
+        l = source_l;
+        r = source_r;
+        float* planes[2] = {l.data(), r.data()};
+        engine.process(planes, 2, block);
+        for (std::size_t i = 0; i < block; ++i) {
+            max_error = std::max(max_error, std::abs(static_cast<double>(l[i]) - source_l[i]));
+            max_error = std::max(max_error, std::abs(static_cast<double>(r[i]) - source_r[i]));
+        }
+    }
+    const std::size_t allocations = g_allocations.load(std::memory_order_relaxed);
+    const auto counters = engine.debug_counters();
+    std::cout << "hard_bypass max_error=" << max_error
+              << " allocations=" << allocations
+              << " fast_blocks=" << counters.hard_bypass_blocks << "\n";
+    return max_error == 0.0 && allocations == 0 && counters.hard_bypass_blocks > 0;
+}
+'''
+          text = replace_once(text, '\n} // namespace\n\nint main()', insertion + '\n} // namespace\n\nint main()', 'hardening test insertion')
+          text = replace_once(text,
+              '''    ok = test_bass_linked_pumping() && ok;\n    return ok ? 0 : 3;''',
+              '''    ok = test_bass_linked_pumping() && ok;\n    ok = test_defaults_and_selective_rebuilds() && ok;\n    ok = test_hard_bypass_passthrough() && ok;\n    return ok ? 0 : 3;''',
+              'hardening test calls')
+          write(path, text)
+
+          # Version and release notes for the next release line.
+          path = 'CMakeLists.txt'
+          text = read(path)
+          text = replace_once(text,
+              'project(arsonkupik-obs-audio-enhancer VERSION 0.4.14 LANGUAGES CXX)',
+              'project(arsonkupik-obs-audio-enhancer VERSION 0.4.15 LANGUAGES CXX)',
+              'v0.4.15 project version')
+          write(path, text)
+
+          changelog = read('CHANGELOG.md')
+          prefix = '# Changelog\n\nAll notable changes to this project are documented here.\n\n'
+          if not changelog.startswith(prefix):
+              raise SystemExit('Unexpected changelog header')
+          entry = '''## [0.4.15] - 2026-07-16\n### Changed\n- Added subsystem-level dirty application so stereo-only, trim-only, and bypass-only changes no longer rebuild unrelated EQ, color, width, or compressor sections.\n- Added a settled hard-bypass fast path that preserves exact pass-through audio and avoids running the creative DSP chain while bypass remains fully engaged.\n- Moved fixed wow calibration into each stable preset definition instead of relying on factory-preset vector order.\n- Unified standalone and OBS defaults through `default_runtime_params()` and `default_engine_params()`.\n- Kept color, compressor, and stereo processor state warm through neutral control positions to avoid hard threshold re-entry.\n- Added regression checks for selective rebuild behavior, hard-bypass pass-through, and zero steady-state bypass allocations.\n\n'''
+          write('CHANGELOG.md', prefix + entry + changelog[len(prefix):])
+
+          notes = '''# ArSonKuPik OBS Audio Enhancer v0.4.15\n\n## Highlights\n- Reduces control-movement CPU work by rebuilding only DSP subsystems affected by the changed parameter.\n- Adds a true settled hard-bypass path with exact pass-through audio.\n- Makes preset loudness calibration stable even when factory preset ordering changes.\n- Uses the MasAri factory preset as the single source of default parameter values.\n\n## Engine changes\n- Stereo Magic changes rebuild only the width subsystem.\n- Output Trim changes update output gain and limiter configuration without rebuilding EQ, color, width, or compression.\n- Bypass-only changes do not rebuild creative DSP configuration.\n- Color, compressor, and width processors remain state-warm at neutral positions; audible contribution reaches zero through mix and gain rather than abrupt enable thresholds.\n- After the bypass smoother reaches its dry target, subsequent blocks skip EQ, compression, color, width, output gain, and limiting while meters remain updated.\n\n## Validation\n- Existing multi-level loudness, automation, limiter, stereo-correlation, pumping, allocation, preset-transition, and bypass-transition gates remain part of CI.\n- New tests verify default consistency, selective subsystem rebuild counters, exact hard-bypass pass-through, and zero allocations during settled bypass.\n\n## Channel policy\nArSonKuPik is a stereo/front-LR processor. On multichannel OBS sources, channels after front left/right are passed through unchanged to preserve source data until a linked multichannel design is implemented and validated.\n'''
+          Path('docs/releases/v0.4.15.md').write_text(notes, encoding='utf-8')
+          Path('docs/releases/latest.md').write_text(notes, encoding='utf-8')
+
+          Path('.github/p1-v0415-engine.ready').unlink(missing_ok=True)
+          Path('.github/workflows/p1-v0415-engine.yml').unlink()
+
+      - name: Configure standalone tests
+        run: cmake -S . -B build-test -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
+
+      - name: Build standalone tests
+        run: cmake --build build-test --config Release
+
+      - name: Run multi-level loudness matrix
+        run: ./build-test/arsonkupik_dsp_smoke
+
+      - name: Run realtime engine hardening
+        run: ./build-test/arsonkupik_dsp_hardening
+
+      - name: Run preset and bypass transitions
+        run: ./build-test/arsonkupik_transition_hardening
+
+      - name: Commit P1 engine hardening
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Harden v0.4.15 engine CPU and bypass behavior"
+          git push origin HEAD:main
