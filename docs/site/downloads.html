@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Download ArSonKuPik OBS Audio Enhancer for Windows and Linux</title>
-  <meta name="description" content="Download the latest ArSonKuPik OBS Audio Enhancer release for OBS Studio. Choose the recommended Windows installer, portable Windows ZIP, or Linux archive.">
+  <meta name="description" content="Download ArSonKuPik OBS Audio Enhancer v0.4.15 for OBS Studio. Choose the Windows installer, portable ZIP, or Linux archive and verify it with published SHA-256 checksums.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <meta name="theme-color" content="#0d1220">
   <link rel="canonical" href="https://masarray.github.io/arsonkupik-obs-audio-enhancer/downloads.html">
@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ArSonKuPik OBS Audio Enhancer">
   <meta property="og:title" content="Download ArSonKuPik OBS Audio Enhancer">
-  <meta property="og:description" content="Get the Windows installer, portable ZIP, or Linux archive for the free open-source ArSonKuPik OBS audio enhancement filter.">
+  <meta property="og:description" content="Get verified Windows and Linux packages for the free open-source ArSonKuPik OBS audio enhancement filter.">
   <meta property="og:url" content="https://masarray.github.io/arsonkupik-obs-audio-enhancer/downloads.html">
   <meta property="og:image" content="https://masarray.github.io/arsonkupik-obs-audio-enhancer/assets/images/og-hero.webp">
   <meta property="og:image:type" content="image/webp">
@@ -23,7 +23,7 @@
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Download ArSonKuPik OBS Audio Enhancer">
-  <meta name="twitter:description" content="Windows installer, portable ZIP, and Linux package for the free open-source OBS audio enhancer.">
+  <meta name="twitter:description" content="Windows installer, portable ZIP, Linux package, build metadata, and SHA-256 checksums for the free OBS audio enhancer.">
   <meta name="twitter:image" content="https://masarray.github.io/arsonkupik-obs-audio-enhancer/assets/images/og-hero.webp">
   <meta name="twitter:image:alt" content="ArSonKuPik OBS Audio Enhancer promotional banner">
 
@@ -35,7 +35,7 @@
     "@type": "WebPage",
     "name": "Download ArSonKuPik OBS Audio Enhancer",
     "url": "https://masarray.github.io/arsonkupik-obs-audio-enhancer/downloads.html",
-    "description": "Official download options for ArSonKuPik OBS Audio Enhancer on Windows and Linux.",
+    "description": "Official verified download options for ArSonKuPik OBS Audio Enhancer on Windows and Linux.",
     "isPartOf": {
       "@type": "WebSite",
       "name": "ArSonKuPik OBS Audio Enhancer",
@@ -44,10 +44,10 @@
     "about": {
       "@type": "SoftwareApplication",
       "name": "ArSonKuPik OBS Audio Enhancer",
-      "softwareVersion": "0.4.12",
+      "softwareVersion": "0.4.15",
       "operatingSystem": "Windows, Linux",
       "applicationCategory": "MultimediaApplication",
-      "downloadUrl": "https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases",
+      "downloadUrl": "https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases/latest",
       "isAccessibleForFree": true
     }
   }
@@ -79,9 +79,9 @@
 
     <section class="section download-hero">
       <div class="wrap">
-        <span class="eyebrow">Official release packages</span>
+        <span class="eyebrow">Official release packages · v0.4.15</span>
         <h1>Download ArSonKuPik for OBS Studio</h1>
-        <p class="lead">Choose the installation format that matches your workflow. The Windows installer is the recommended path for most users; portable and Linux packages remain available for manual deployment.</p>
+        <p class="lead">Choose the installation format that matches your workflow. Official releases are built after DSP validation, use a pinned OBS dependency, and include SHA-256 checksums plus build metadata.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases/latest">Open latest release</a>
           <a class="btn btn-secondary" href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/tree/main/docs/releases">Read release notes</a>
@@ -96,7 +96,7 @@
           <article class="card recommended-card">
             <span class="card-badge">Recommended</span>
             <h2>Windows installer</h2>
-            <p>The simplest option for most users. Close OBS Studio, run the setup executable as Administrator, then reopen OBS.</p>
+            <p>The simplest option for most users. Close OBS Studio, verify the downloaded file when practical, run setup as Administrator, then reopen OBS.</p>
             <ul class="compact-list">
               <li>Automatic plugin-folder deployment</li>
               <li>Standard ProgramData installation</li>
@@ -121,7 +121,7 @@
             <p>Extract the release archive and copy its package contents into the OBS plugin location used by your distribution.</p>
             <ul class="compact-list">
               <li>Manual archive deployment</li>
-              <li>Built through the Linux release workflow</li>
+              <li>Built through the validated Linux workflow</li>
               <li>Intended for supported x64 setups</li>
             </ul>
             <a class="btn btn-secondary card-action" href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases/latest">Download latest `.tar.gz`</a>
@@ -133,11 +133,33 @@
     <section class="section">
       <div class="wrap split">
         <div>
+          <span class="section-kicker">Release integrity</span>
+          <h2>Verify what you downloaded</h2>
+          <p>Each tagged release includes <code>SHA256SUMS.txt</code> and <code>BUILD-METADATA.txt</code>. The checksum file detects accidental corruption or a modified download; the metadata file records the source commit and pinned OBS Studio dependency used for the build.</p>
+          <ol class="steps-list">
+            <li><span>1</span><div><strong>Download from GitHub Releases</strong><p>Use only assets attached to the official repository release.</p></div></li>
+            <li><span>2</span><div><strong>Download SHA256SUMS.txt</strong><p>Compare the published hash with the file on your computer before installation.</p></div></li>
+            <li><span>3</span><div><strong>Review build metadata</strong><p>Confirm the release tag, source commit, and OBS dependency when auditing a deployment.</p></div></li>
+          </ol>
+        </div>
+        <div class="card path-card">
+          <h3>Windows PowerShell</h3>
+          <pre><code>Get-FileHash .\ArSonKuPik-OBS-Audio-Enhancer-Setup-vX.Y.Z.exe -Algorithm SHA256</code></pre>
+          <h3>Linux</h3>
+          <pre><code>sha256sum -c SHA256SUMS.txt</code></pre>
+          <p class="muted-note">Checksums provide integrity verification; they are not operating-system code signing.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt">
+      <div class="wrap split">
+        <div>
           <span class="section-kicker">Windows installation</span>
           <h2>Installer steps</h2>
           <ol class="steps-list">
             <li><span>1</span><div><strong>Close OBS Studio</strong><p>Prevent locked files and ensure the plugin is loaded cleanly on the next start.</p></div></li>
-            <li><span>2</span><div><strong>Run the setup executable</strong><p>Use the latest `ArSonKuPik-OBS-Audio-Enhancer-Setup-vX.Y.Z.exe` release asset.</p></div></li>
+            <li><span>2</span><div><strong>Run the setup executable</strong><p>Use the latest <code>ArSonKuPik-OBS-Audio-Enhancer-Setup-vX.Y.Z.exe</code> release asset.</p></div></li>
             <li><span>3</span><div><strong>Restart OBS</strong><p>Add <em>ArSonKuPik Smart Enhancer</em> from the audio source Filters panel.</p></div></li>
           </ol>
         </div>
@@ -150,12 +172,26 @@
       </div>
     </section>
 
+    <section class="section">
+      <div class="wrap split">
+        <div>
+          <span class="section-kicker">Audio channel scope</span>
+          <h2>Stereo/front-LR processing</h2>
+          <p>ArSonKuPik processes the front-left and front-right pair. Additional channels on multichannel sources are passed through unchanged until a linked multichannel design is implemented and validated.</p>
+        </div>
+        <div class="stack-list">
+          <div><strong>Front L/R</strong><span>Receives the complete enhancement, dynamics, width, gain, and limiter chain</span></div>
+          <div><strong>Center, LFE, surround</strong><span>Passed through unchanged to preserve the original multichannel data</span></div>
+        </div>
+      </div>
+    </section>
+
     <section class="section section-alt">
       <div class="wrap split">
         <div>
           <span class="section-kicker">Before reporting a problem</span>
           <h2>Confirm the basics</h2>
-          <p>Use a current release, restart OBS after installation, and verify that the filter appears on the intended audio source. Audio-quality reports are most useful when they include the exact preset, slider values, OBS version, operating system, sample rate, and reproducible steps.</p>
+          <p>Use a current release, restart OBS after installation, and verify that the filter appears on the intended audio source. Reports are most useful when they include the exact preset, slider values, OBS version, operating system, sample rate, channel layout, and reproducible steps.</p>
         </div>
         <div class="stack-list">
           <div><strong>Release notes</strong><span>Review changes and known behavior for the installed version</span><a class="text-link" href="https://github.com/masarray/arsonkupik-obs-audio-enhancer/tree/main/docs/releases">Browse notes →</a></div>
