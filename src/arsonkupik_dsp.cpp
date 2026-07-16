@@ -302,9 +302,11 @@ std::pair<float,float> LimiterProcessor::process(float l, float r)
 
 ArSonKuPikEngine::ArSonKuPikEngine()
 {
-    preset_ = &default_preset();
+    params_ = default_engine_params();
+    preset_ = &preset_at_index(params_.preset_index);
     working_.eq.reserve(kMaxEqStages);
     load_working_from_preset();
+    apply_macros();
     update_cached_gains();
 }
 
@@ -330,8 +332,13 @@ void ArSonKuPikEngine::prepare(double sample_rate, std::size_t channels)
     width_corr_alpha_ = 1.0 - std::exp(-static_cast<double>(kWidthControlInterval) / (sample_rate_ * 0.090));
 
     compressor_.prepare(sample_rate_, working_.compressor);
+    ++debug_counters_.compressor_updates;
     limiter_.prepare(sample_rate_, working_.output);
-    rebuild_from_preset();
+    ++debug_counters_.limiter_updates;
+    rebuild_eq();
+    rebuild_color_filters();
+    rebuild_width_filters();
+    update_cached_gains();
     reset();
 }
 
@@ -353,12 +360,57 @@ void ArSonKuPikEngine::set_runtime_params(const RuntimeParams& params)
 
 void ArSonKuPikEngine::set_realtime_params(const EngineParams& params)
 {
+    const EngineParams previous = params_;
+    const auto changed = [](double a, double b, double epsilon) {
+        return std::abs(a - b) > epsilon;
+    };
+
+    const bool preset_changed = previous.preset_index != params.preset_index;
+    const bool override_changed = previous.advanced_override != params.advanced_override;
+    const bool enhance_changed = changed(previous.enhance, params.enhance, 0.0001);
+    const bool bass_changed = changed(previous.smart_bass, params.smart_bass, 0.0001);
+    const bool treble_changed = changed(previous.smart_treble, params.smart_treble, 0.0001);
+    const bool vocal_changed = changed(previous.vocal_body, params.vocal_body, 0.0001);
+    const bool stereo_changed = changed(previous.stereo_magic, params.stereo_magic, 0.0001);
+    const bool trim_changed = changed(previous.output_trim_db, params.output_trim_db, 0.0001);
+    const bool protect_changed = previous.smart_protect != params.smart_protect;
+    const bool leaving_hard_bypass = hard_bypass_active_ && previous.bypass && !params.bypass;
+
+    const bool full = preset_changed || override_changed;
+    const bool tonal = full || enhance_changed || bass_changed || treble_changed || vocal_changed;
+    const bool compressor_dirty = full || enhance_changed || vocal_changed;
+    const bool width_dirty = full || stereo_changed;
+    const bool output_dirty = full || enhance_changed || bass_changed || treble_changed
+                           || vocal_changed || trim_changed || protect_changed;
+    const bool dsp_dirty = tonal || compressor_dirty || width_dirty || output_dirty;
+
     params_ = params;
-    preset_ = &preset_at_index(params_.preset_index);
-    load_working_from_preset();
-    apply_macros();
-    rebuild_from_preset();
-    update_cached_gains();
+    if (preset_changed) preset_ = &preset_at_index(params_.preset_index);
+
+    if (dsp_dirty) {
+        load_working_from_preset();
+        apply_macros();
+        if (tonal) {
+            rebuild_eq();
+            rebuild_color_filters();
+        }
+        if (compressor_dirty) {
+            compressor_.set_config(working_.compressor);
+            ++debug_counters_.compressor_updates;
+        }
+        if (width_dirty) rebuild_width_filters();
+        if (output_dirty) {
+            limiter_.set_config(working_.output);
+            ++debug_counters_.limiter_updates;
+            update_cached_gains();
+        }
+    }
+
+    if (leaving_hard_bypass) {
+        reset();
+        bypass_smooth_.reset(1.0);
+        hard_bypass_active_ = false;
+    }
 }
 
 void ArSonKuPikEngine::reset()
@@ -388,6 +440,7 @@ void ArSonKuPikEngine::reset()
     meter_corr_lr_env_ = 1.0e-6; meter_corr_l2_env_ = 1.0e-6; meter_corr_r2_env_ = 1.0e-6;
     meters_ = {};
     bypass_smooth_.reset(params_.bypass ? 1.0 : 0.0);
+    hard_bypass_active_ = params_.bypass;
     compressor_.reset(); limiter_.reset();
 }
 

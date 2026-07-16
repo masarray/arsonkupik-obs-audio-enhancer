@@ -9,28 +9,6 @@ namespace {
 constexpr double kInternalChainHeadroomDb = -8.0;
 constexpr double kInternalRestoreDb = 4.9;
 
-// Fixed, source-independent calibration. The values follow factory_presets()
-// order and keep each preset's default perceived ON/bypass benefit near 3 dB
-// RMS without reintroducing a dynamic makeup AGC or pumping-prone gain loop.
-constexpr std::array<double, 12> kPresetWowTrimDb = {
-    1.05,  // MasAri
-    3.60,  // Mastering Global
-    2.35,  // Max Enhancer
-    0.42,  // SonKuHoreg
-   -0.48,  // SonKuBattle
-    0.06,  // SonKuBalap
-    4.40,  // Audiophile
-    1.95,  // Punchy Music
-    3.45,  // Open Air
-    5.58,  // Movie Sub
-    4.60,  // Podcast
-    8.92   // Night Listening
-};
-
-double preset_wow_trim_db(std::size_t preset_index)
-{
-    return preset_index < kPresetWowTrimDb.size() ? kPresetWowTrimDb[preset_index] : 0.0;
-}
 
 struct QTableView { const double* values = nullptr; std::size_t count = 0; };
 QTableView butterworth_q_values(int slope)
@@ -110,7 +88,7 @@ void ArSonKuPikEngine::apply_macros()
     const double colorActivation = clamp01(enhance * 0.70 + vocal * 0.58 + vocalTuck * 0.28
                                          + bassBoost * 0.34 + trebleBoost * 0.36
                                          + bassClean * 0.12 + trebleClean * 0.22);
-    working_.color.enabled = colorActivation > 0.006 || bassClean > 0.015 || trebleClean > 0.015 || vocalTuck > 0.015;
+    working_.color.enabled = true; // keep filter state warm; mix reaches zero at neutral
     working_.color.mix = clamp(20.0 * vocal + 31.0 * enhance + 8.0 * vocalTuck
                              + 9.0 * bassBoost + 13.5 * trebleBoost + masari,
                              0.0, 54.0);
@@ -165,7 +143,7 @@ void ArSonKuPikEngine::apply_macros()
 
     working_.color.harmonics = clamp(72.0 * enhance + 14.0 * trebleBoost, 0.0, 100.0);
     working_.color.mix = clamp(working_.color.mix + enhance * (4.0 + masari * 2.0), 0.0, 54.0);
-    working_.compressor.enabled = enhance > 0.006 || vocal > 0.006;
+    working_.compressor.enabled = true; // zero parallel mix is the neutral state
     working_.compressor.threshold_db = clamp(-15.5 - 4.0 * enhance - 2.2 * vocal, -24.0, -11.5);
     working_.compressor.ratio = clamp(1.04 + enhance * 0.34 + vocal * 0.40, 1.0, 1.52);
     working_.compressor.attack_sec = clamp(0.046 - 0.015 * vocal + 0.006 * (1.0 - enhance), 0.018, 0.064);
@@ -173,7 +151,7 @@ void ArSonKuPikEngine::apply_macros()
     working_.compressor.parallel_mix = clamp(40.0 * enhance + 24.0 * vocal, 0.0, 42.0);
     working_.compressor.makeup_gain_db = clamp(0.10 + 0.85 * enhance + 0.95 * vocal, 0.0, 1.35);
 
-    working_.width.enabled = std::abs(stereoBip) > 0.006;
+    working_.width.enabled = true; // keep M/S analysis and filter history warm
     if (stereoNarrow > 0.006) {
         const double monoScale = 100.0 * (1.0 - stereoNarrow);
         working_.width.mix = 100.0;
@@ -191,6 +169,14 @@ void ArSonKuPikEngine::apply_macros()
         working_.width.high_width = clamp(100.0 + 116.0 * stereoWide, 100.0, 224.0);
         working_.width.source_protect = clamp(78.0 - 12.0 * stereoWide, 58.0, 96.0);
         working_.width.side_tone = clamp(0.6 + 3.8 * stereoWide, 0.0, 5.0);
+    } else {
+        working_.width.mix = 0.0;
+        working_.width.width = 100.0;
+        working_.width.low_mid_width = 100.0;
+        working_.width.mid_width = 100.0;
+        working_.width.high_width = 100.0;
+        working_.width.source_protect = 100.0;
+        working_.width.side_tone = 0.0;
     }
 
     const double perceived_benefit_db = enhance * 0.72 + vocal * 0.38
@@ -198,7 +184,7 @@ void ArSonKuPikEngine::apply_macros()
                                       - vocalTuck * 0.08;
     working_.output.output_gain_db = params_.output_trim_db
                                    + perceived_benefit_db
-                                   + preset_wow_trim_db(params_.preset_index)
+                                   + preset_->calibrated_wow_trim_db
                                    - 1.00;
     working_.output.bypass = params_.bypass;
     working_.output.punch_protect = params_.smart_protect;
@@ -212,17 +198,21 @@ void ArSonKuPikEngine::apply_macros()
     }
 }
 
-void ArSonKuPikEngine::rebuild_from_preset()
+void ArSonKuPikEngine::rebuild_all_processors()
 {
     rebuild_eq();
     rebuild_color_filters();
     rebuild_width_filters();
     compressor_.set_config(working_.compressor);
+    ++debug_counters_.compressor_updates;
     limiter_.set_config(working_.output);
+    ++debug_counters_.limiter_updates;
+    update_cached_gains();
 }
 
 void ArSonKuPikEngine::rebuild_eq()
 {
+    ++debug_counters_.eq_rebuilds;
     struct EqStageSpec {
         EqType type = EqType::Bell;
         double frequency = 1000.0;
@@ -255,12 +245,14 @@ void ArSonKuPikEngine::rebuild_eq()
 
 void ArSonKuPikEngine::update_cached_gains()
 {
+    ++debug_counters_.gain_updates;
     cached_input_gain_ = db_to_gain(working_.output.input_gain_db + kInternalChainHeadroomDb);
     cached_output_gain_ = db_to_gain(working_.output.output_gain_db + kInternalRestoreDb);
 }
 
 void ArSonKuPikEngine::rebuild_color_filters()
 {
+    ++debug_counters_.color_rebuilds;
     const auto& c = working_.color;
     const double body_center = clamp(c.body_freq, 95.0, 260.0);
     const double warm_center = clamp(c.warmth_freq, 300.0, 760.0);
@@ -288,6 +280,7 @@ void ArSonKuPikEngine::rebuild_color_filters()
 
 void ArSonKuPikEngine::rebuild_width_filters()
 {
+    ++debug_counters_.width_rebuilds;
     const auto& w = working_.width;
     const double tone = std::max(0.0, w.side_tone);
     const double generated_low_cut = w.mono_bass ? std::max(210.0, w.mono_bass_freq) : 150.0;

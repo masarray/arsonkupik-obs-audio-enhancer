@@ -243,6 +243,110 @@ bool test_bass_linked_pumping()
     std::cout << "pumping variation_db=" << variation_db << "\n";
     return finite_buffer(out) && variation_db <= 0.35;
 }
+
+bool test_defaults_and_selective_rebuilds()
+{
+    using namespace arsonkupik;
+    const auto& preset = default_preset();
+    EngineParams params = default_engine_params();
+    const bool defaults_match = params.preset_index == preset_index_from_id(preset.id)
+        && std::abs(params.enhance - preset.macro.enhance) < 1.0e-9
+        && std::abs(params.smart_bass - preset.macro.smart_bass) < 1.0e-9
+        && std::abs(params.smart_treble - preset.macro.smart_treble) < 1.0e-9
+        && std::abs(params.vocal_body - preset.macro.vocal_body) < 1.0e-9
+        && std::abs(params.stereo_magic - preset.macro.stereo_magic) < 1.0e-9
+        && std::abs(params.output_trim_db - preset.output.output_gain_db) < 1.0e-9;
+
+    ArSonKuPikEngine engine;
+    engine.set_realtime_params(params);
+    engine.prepare(48000.0, 2);
+    const auto baseline = engine.debug_counters();
+
+    EngineParams stereo = params;
+    stereo.stereo_magic += 1.0;
+    engine.set_realtime_params(stereo);
+    const auto after_stereo = engine.debug_counters();
+    const bool stereo_only = after_stereo.width_rebuilds == baseline.width_rebuilds + 1
+        && after_stereo.eq_rebuilds == baseline.eq_rebuilds
+        && after_stereo.color_rebuilds == baseline.color_rebuilds
+        && after_stereo.compressor_updates == baseline.compressor_updates
+        && after_stereo.limiter_updates == baseline.limiter_updates
+        && after_stereo.gain_updates == baseline.gain_updates;
+
+    EngineParams trim = stereo;
+    trim.output_trim_db += 0.1;
+    engine.set_realtime_params(trim);
+    const auto after_trim = engine.debug_counters();
+    const bool trim_only = after_trim.eq_rebuilds == after_stereo.eq_rebuilds
+        && after_trim.color_rebuilds == after_stereo.color_rebuilds
+        && after_trim.width_rebuilds == after_stereo.width_rebuilds
+        && after_trim.compressor_updates == after_stereo.compressor_updates
+        && after_trim.limiter_updates == after_stereo.limiter_updates + 1
+        && after_trim.gain_updates == after_stereo.gain_updates + 1;
+
+    EngineParams bypass = trim;
+    bypass.bypass = true;
+    engine.set_realtime_params(bypass);
+    const auto after_bypass = engine.debug_counters();
+    const bool bypass_no_rebuild = after_bypass.eq_rebuilds == after_trim.eq_rebuilds
+        && after_bypass.color_rebuilds == after_trim.color_rebuilds
+        && after_bypass.width_rebuilds == after_trim.width_rebuilds
+        && after_bypass.compressor_updates == after_trim.compressor_updates
+        && after_bypass.limiter_updates == after_trim.limiter_updates
+        && after_bypass.gain_updates == after_trim.gain_updates;
+
+    std::cout << "defaults_match=" << defaults_match
+    << " stereo_only=" << stereo_only
+    << " trim_only=" << trim_only
+    << " bypass_no_rebuild=" << bypass_no_rebuild << "\n";
+    return defaults_match && stereo_only && trim_only && bypass_no_rebuild;
+}
+
+bool test_hard_bypass_passthrough()
+{
+    using namespace arsonkupik;
+    constexpr double sr = 48000.0;
+    constexpr std::size_t block = 256;
+    std::vector<float> l(block), r(block), source_l(block), source_r(block);
+    for (std::size_t i = 0; i < block; ++i) {
+        source_l[i] = static_cast<float>(0.18 * std::sin(2.0 * kPi * 997.0 * i / sr));
+        source_r[i] = static_cast<float>(0.16 * std::sin(2.0 * kPi * 733.0 * i / sr + 0.2));
+    }
+
+    EngineParams params = default_engine_params();
+    ArSonKuPikEngine engine;
+    engine.set_realtime_params(params);
+    engine.prepare(sr, 2);
+    params.bypass = true;
+    engine.set_realtime_params(params);
+
+    for (int n = 0; n < 140; ++n) {
+        l = source_l;
+        r = source_r;
+        float* planes[2] = {l.data(), r.data()};
+        engine.process(planes, 2, block);
+    }
+
+    g_allocations.store(0, std::memory_order_relaxed);
+    double max_error = 0.0;
+    for (int n = 0; n < 100; ++n) {
+        l = source_l;
+        r = source_r;
+        float* planes[2] = {l.data(), r.data()};
+        engine.process(planes, 2, block);
+        for (std::size_t i = 0; i < block; ++i) {
+  max_error = std::max(max_error, std::abs(static_cast<double>(l[i]) - source_l[i]));
+  max_error = std::max(max_error, std::abs(static_cast<double>(r[i]) - source_r[i]));
+        }
+    }
+    const std::size_t allocations = g_allocations.load(std::memory_order_relaxed);
+    const auto counters = engine.debug_counters();
+    std::cout << "hard_bypass max_error=" << max_error
+    << " allocations=" << allocations
+    << " fast_blocks=" << counters.hard_bypass_blocks << "\n";
+    return max_error == 0.0 && allocations == 0 && counters.hard_bypass_blocks > 0;
+}
+
 } // namespace
 
 int main()
@@ -253,5 +357,7 @@ int main()
     ok = test_correlation_meter() && ok;
     ok = test_realtime_allocation_free() && ok;
     ok = test_bass_linked_pumping() && ok;
+    ok = test_defaults_and_selective_rebuilds() && ok;
+    ok = test_hard_bypass_passthrough() && ok;
     return ok ? 0 : 3;
 }

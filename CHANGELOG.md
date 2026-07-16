@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.15] - 2026-07-16
+### Changed
+- Added subsystem-level dirty application so stereo-only, trim-only, and bypass-only changes no longer rebuild unrelated EQ, color, width, or compressor sections.
+- Added a settled hard-bypass fast path that preserves exact pass-through audio and avoids running the creative DSP chain while bypass remains fully engaged.
+- Moved fixed wow calibration into each stable preset definition instead of relying on factory-preset vector order.
+- Unified standalone and OBS defaults through `default_runtime_params()` and `default_engine_params()`.
+- Kept color, compressor, and stereo processor state warm through neutral control positions to avoid hard threshold re-entry.
+- Added regression checks for selective rebuild behavior, hard-bypass pass-through, and zero steady-state bypass allocations.
+
 ## [Unreleased]
 ### Changed
 - Replaced the OBS-only transition implementation with a shared, allocation-free preset and bypass transition processor used by both the plugin wrapper and standalone regression tests.
