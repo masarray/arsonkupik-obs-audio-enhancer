@@ -284,7 +284,7 @@ std::vector<Preset> make_presets()
 
     {
         auto p = base("movie-dolby", "Movie Sub", "Thick sub, clean low-mid, guarded dialogue clarity, smooth cinematic width.");
-        p.calibrated_wow_trim_db = 5.58;
+        p.calibrated_wow_trim_db = 5.61;
         p.eq = {
             b("movie-cut", EqType::LowCut, 24, 0, 0.70710678, 24),
             b("movie-low", EqType::LowShelf, 58, 2.35, 0.70),
