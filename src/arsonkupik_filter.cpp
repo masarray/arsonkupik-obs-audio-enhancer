@@ -2,25 +2,20 @@
 #include <media-io/audio-io.h>
 
 #include "arsonkupik_dsp.hpp"
+#include "arsonkupik_transition.hpp"
 
 #include <algorithm>
-#include <array>
 #include <atomic>
-#include <cmath>
 #include <cstdint>
 #include <cstring>
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("arsonkupik-obs-audio-enhancer", "en-US")
 
-using arsonkupik::ArSonKuPikEngine;
+using arsonkupik::ArSonKuPikTransitionProcessor;
 using arsonkupik::EngineParams;
 
 namespace {
-constexpr double kPi = 3.1415926535897932384626433832795;
-constexpr double kKnobSmoothingSeconds = 0.080;
-constexpr double kPresetCrossfadeSeconds = 0.010;
-constexpr std::size_t kTransitionChunkFrames = 2048;
 
 static_assert(std::atomic<std::uint64_t>::is_always_lock_free,
               "ArSonKuPik requires lock-free 64-bit atomics on supported x64 builds");
@@ -98,18 +93,11 @@ struct AtomicEngineTarget {
 
 struct FilterData {
     obs_source_t* source = nullptr;
-    std::array<ArSonKuPikEngine, 2> engines;
-    std::size_t active_engine = 0;
-    std::size_t staging_engine = 1;
+    ArSonKuPikTransitionProcessor processor;
     AtomicEngineTarget published_target;
-    EngineParams active_params{};
-    EngineParams staging_params{};
+    EngineParams last_requested{};
     std::uint32_t sample_rate = 48000;
     std::size_t channels = 2;
-    bool crossfade_active = false;
-    std::size_t crossfade_position = 0;
-    std::size_t crossfade_total = 1;
-    std::array<std::array<float, kTransitionChunkFrames>, arsonkupik::kMaxChannels> staging_audio{};
 };
 
 const char* get_name(void*)
@@ -172,127 +160,15 @@ EngineParams read_settings(obs_data_t* settings)
     return p;
 }
 
-bool engine_params_close(const EngineParams& a, const EngineParams& b)
-{
-    const auto near = [](double x, double y, double eps) { return std::abs(x - y) <= eps; };
-    return a.preset_index == b.preset_index
-        && a.advanced_override == b.advanced_override
-        && a.smart_protect == b.smart_protect
-        && a.bypass == b.bypass
-        && near(a.enhance, b.enhance, 0.020)
-        && near(a.smart_bass, b.smart_bass, 0.020)
-        && near(a.smart_treble, b.smart_treble, 0.020)
-        && near(a.vocal_body, b.vocal_body, 0.020)
-        && near(a.stereo_magic, b.stereo_magic, 0.020)
-        && near(a.output_trim_db, b.output_trim_db, 0.005);
-}
-
-bool smooth_params(EngineParams& current, const EngineParams& target,
-                   std::size_t frames, std::uint32_t sample_rate)
-{
-    const EngineParams before = current;
-    const double denom = std::max(1.0, static_cast<double>(sample_rate) * kKnobSmoothingSeconds);
-    const double alpha = 1.0 - std::exp(-static_cast<double>(frames) / denom);
-    const auto smooth = [alpha](double value, double target_value, double snap_eps) {
-        const double next = value + (target_value - value) * alpha;
-        return std::abs(next - target_value) <= snap_eps ? target_value : next;
-    };
-
-    current.enhance = smooth(current.enhance, target.enhance, 0.010);
-    current.smart_bass = smooth(current.smart_bass, target.smart_bass, 0.010);
-    current.smart_treble = smooth(current.smart_treble, target.smart_treble, 0.010);
-    current.vocal_body = smooth(current.vocal_body, target.vocal_body, 0.010);
-    current.stereo_magic = smooth(current.stereo_magic, target.stereo_magic, 0.010);
-    current.output_trim_db = smooth(current.output_trim_db, target.output_trim_db, 0.003);
-    current.smart_protect = target.smart_protect;
-    current.bypass = target.bypass;
-    current.advanced_override = true;
-    return !engine_params_close(before, current);
-}
-
-void prepare_engines(FilterData* f, const EngineParams& p)
-{
-    for (auto& engine : f->engines) {
-        engine.set_realtime_params(p);
-        engine.prepare(f->sample_rate, f->channels);
-    }
-    f->active_engine = 0;
-    f->staging_engine = 1;
-    f->active_params = p;
-    f->staging_params = p;
-    f->crossfade_active = false;
-    f->crossfade_position = 0;
-}
-
-void begin_preset_crossfade(FilterData* f, const EngineParams& requested)
-{
-    f->staging_params = requested;
-    auto& staging = f->engines[f->staging_engine];
-    staging.set_realtime_params(f->staging_params);
-    staging.reset();
-    f->crossfade_total = std::max<std::size_t>(1,
-        static_cast<std::size_t>(static_cast<double>(f->sample_rate) * kPresetCrossfadeSeconds));
-    f->crossfade_position = 0;
-    f->crossfade_active = true;
-}
-
-void process_crossfade(FilterData* f, float** planes, std::size_t channels, std::size_t frames)
-{
-    auto& active = f->engines[f->active_engine];
-    auto& staging = f->engines[f->staging_engine];
-
-    for (std::size_t offset = 0; offset < frames; offset += kTransitionChunkFrames) {
-        const std::size_t count = std::min(kTransitionChunkFrames, frames - offset);
-        float* active_planes[arsonkupik::kMaxChannels]{};
-        float* staging_planes[arsonkupik::kMaxChannels]{};
-
-        for (std::size_t ch = 0; ch < channels; ++ch) {
-            if (!planes[ch]) continue;
-            active_planes[ch] = planes[ch] + offset;
-            staging_planes[ch] = f->staging_audio[ch].data();
-            std::copy_n(active_planes[ch], count, staging_planes[ch]);
-        }
-
-        active.process(active_planes, channels, count);
-        staging.process(staging_planes, channels, count);
-
-        for (std::size_t i = 0; i < count; ++i) {
-            const std::size_t absolute = f->crossfade_position + i;
-            const double t = f->crossfade_total <= 1
-                ? 1.0
-                : std::min(1.0, static_cast<double>(absolute)
-                                  / static_cast<double>(f->crossfade_total - 1));
-            const double old_gain = std::cos(t * kPi * 0.5);
-            const double new_gain = std::sin(t * kPi * 0.5);
-            const double normalization = 1.0 / std::max(1.0, old_gain + new_gain);
-            const std::size_t processed_channels = std::min<std::size_t>(channels, 2);
-            for (std::size_t ch = 0; ch < processed_channels; ++ch) {
-                if (!active_planes[ch] || !staging_planes[ch]) continue;
-                active_planes[ch][i] = static_cast<float>((
-                    static_cast<double>(active_planes[ch][i]) * old_gain
-                    + static_cast<double>(staging_planes[ch][i]) * new_gain) * normalization);
-            }
-        }
-        f->crossfade_position += count;
-    }
-
-    if (f->crossfade_position >= f->crossfade_total) {
-        std::swap(f->active_engine, f->staging_engine);
-        f->active_params = f->staging_params;
-        f->crossfade_active = false;
-        f->crossfade_position = 0;
-    }
-}
-
 void* create(obs_data_t* settings, obs_source_t* source)
 {
     auto* f = new FilterData();
     f->source = source;
     f->sample_rate = current_sample_rate();
     f->channels = std::min<std::size_t>(current_channel_count(), arsonkupik::kMaxChannels);
-    const EngineParams initial = read_settings(settings);
-    f->published_target.publish(initial);
-    prepare_engines(f, initial);
+    f->last_requested = read_settings(settings);
+    f->published_target.publish(f->last_requested);
+    f->processor.prepare(f->sample_rate, f->channels, f->last_requested);
     return f;
 }
 
@@ -352,12 +228,12 @@ obs_audio_data* filter_audio(void* data, obs_audio_data* audio)
     const std::uint32_t sr = current_sample_rate();
     const std::size_t channels = std::min<std::size_t>(
         current_channel_count(), arsonkupik::kMaxChannels);
-    EngineParams requested = f->published_target.load_or(f->active_params);
+    const EngineParams requested = f->published_target.load_or(f->last_requested);
 
     if (sr != f->sample_rate || channels != f->channels) {
         f->sample_rate = sr;
         f->channels = channels;
-        prepare_engines(f, requested);
+        f->processor.prepare(f->sample_rate, f->channels, requested);
     }
 
     float* planes[arsonkupik::kMaxChannels]{};
@@ -366,23 +242,8 @@ obs_audio_data* filter_audio(void* data, obs_audio_data* audio)
     }
     if (!planes[0]) return audio;
 
-    if (!f->crossfade_active && requested.preset_index != f->active_params.preset_index) {
-        begin_preset_crossfade(f, requested);
-    }
-
-    if (f->crossfade_active) {
-        if (requested.preset_index == f->staging_params.preset_index
-            && smooth_params(f->staging_params, requested, audio->frames, f->sample_rate)) {
-            f->engines[f->staging_engine].set_realtime_params(f->staging_params);
-        }
-        process_crossfade(f, planes, f->channels, audio->frames);
-        return audio;
-    }
-
-    if (smooth_params(f->active_params, requested, audio->frames, f->sample_rate)) {
-        f->engines[f->active_engine].set_realtime_params(f->active_params);
-    }
-    f->engines[f->active_engine].process(planes, f->channels, audio->frames);
+    f->processor.process(planes, f->channels, audio->frames, requested);
+    f->last_requested = requested;
     return audio;
 }
 
