@@ -38,26 +38,32 @@
 
 ## Highlights
 
-- Smart loudness benefit tuned for real-world listener perception
+- Smart loudness benefit tuned across moderate and hot input-level test cases
 - Musical presets for music, media, podcast, and night listening
 - OBS-native audio filter workflow
 - Stereo integrity-first enhancement designed to preserve center focus
-- CPU-conscious DSP direction for live streaming
-- Automated public releases with installer, portable ZIP, Linux package, and release notes
+- Shared, regression-tested preset and bypass transition processor
+- Selective subsystem retuning so unrelated DSP sections are not rebuilt unnecessarily
+- Settled hard-bypass path with exact pass-through audio and reduced bypass CPU work
+- Automated releases with pinned OBS dependency, installer, portable ZIP, Linux package, metadata, and SHA-256 checksums
 
 ## Public quality targets
 
-ArSonKuPik is maintained against explicit real-time audio goals:
+ArSonKuPik is designed and regression-tested against explicit real-time audio goals:
 
-- crackle-free continuous control movement;
-- click-safe preset switching;
-- stable dynamics without obvious pumping or breathing;
-- calibrated Filter ON benefit rather than an extreme hidden volume jump;
-- practical CPU behavior that stops retuning after parameters settle;
+- click-safe continuous control movement without resetting filter history;
+- click-safe preset and bypass transitions through a shared tested transition processor;
+- stable dynamics without obvious full-band pumping or breathing;
+- calibrated Filter ON benefit at moderate source levels while allowing safe behavior on hot mastered sources;
+- practical CPU behavior that stops retuning after parameters settle and skips the creative chain during settled bypass;
 - audible Smart Bass, Smart Treble, Vocal Body, and Stereo Magic ranges;
 - stable center focus and useful mono compatibility.
 
-See [Audio quality standards](docs/AUDIO_QUALITY.md) for validation methods, implementation rules, listening protocol, and release gates.
+These are engineering targets and regression gates, not an absolute guarantee for every host, driver, device, or source. See [Audio quality standards](docs/AUDIO_QUALITY.md) for validation methods, implementation rules, listening protocol, and release gates.
+
+## Channel policy
+
+ArSonKuPik is currently a **stereo/front-left and front-right processor**. On multichannel OBS sources, channels after the front L/R pair are passed through unchanged. This avoids applying unlinked dynamics or unequal gain to center, LFE, and surround channels before a dedicated linked multichannel design has been implemented and validated.
 
 ## Support development
 
@@ -78,7 +84,7 @@ Do not trust payment links, account numbers, or QR images shared elsewhere unles
 
 ## Quality, support, and contribution
 
-- [Audio quality standards](docs/AUDIO_QUALITY.md) — DSP targets, gain-staging policy, crackle and pumping validation, CPU expectations, stereo tests, and release gates
+- [Audio quality standards](docs/AUDIO_QUALITY.md) — DSP targets, gain-staging policy, transition validation, CPU expectations, stereo tests, and release gates
 - [Support guide](SUPPORT.md) — installation, build, diagnostic, and audio-report requirements
 - [Contributing guide](CONTRIBUTING.md) — contributor workflow, real-time audio-thread rules, test requirements, and pull-request checklist
 - [Security policy](SECURITY.md) — supported versions, private vulnerability reporting, coordinated disclosure, and release-safety guidance
@@ -91,6 +97,8 @@ Use the latest GitHub Release:
 - **Windows installer `.exe`** — recommended for most users
 - **Windows portable `.zip`** — manual copy/paste install
 - **Linux `.tar.gz`** — manual Linux package artifact
+- **`SHA256SUMS.txt`** — integrity hashes for all published assets
+- **`BUILD-METADATA.txt`** — source commit and pinned OBS build dependency
 
 GitHub Releases: https://github.com/masarray/arsonkupik-obs-audio-enhancer/releases
 
@@ -100,9 +108,10 @@ GitHub Releases: https://github.com/masarray/arsonkupik-obs-audio-enhancer/relea
 
 1. Close OBS Studio.
 2. Download `ArSonKuPik-OBS-Audio-Enhancer-Setup-vX.Y.Z.exe`.
-3. Run the installer as Administrator.
-4. Restart OBS Studio.
-5. Add the filter from **Audio Source → Filters → + → ArSonKuPik Smart Enhancer**.
+3. Optionally verify its SHA-256 hash against `SHA256SUMS.txt`.
+4. Run the installer as Administrator.
+5. Restart OBS Studio.
+6. Add the filter from **Audio Source → Filters → + → ArSonKuPik Smart Enhancer**.
 
 The installer uses the standard OBS ProgramData plugin location:
 
@@ -138,15 +147,17 @@ install_plugin_windows.bat
 `build_plugin_single_click.bat` builds the OBS plugin and creates a ProgramData-ready package.  
 `install_plugin_windows.bat` installs that local package into the standard OBS ProgramData plugin folder.
 
-The build helper uses `scripts/find-cmake.bat` internally to find CMake, including Visual Studio bundled CMake.
+The build helper uses `scripts/find-cmake.bat` internally to find CMake, including Visual Studio bundled CMake. Official and default local builds use the OBS Studio version pinned in `cmake/OBS_VERSION.txt`.
 
 ## Release automation
 
-Create and push a version tag to trigger the release workflow. The workflow builds and publishes:
+Create and push a matching semantic-version tag to trigger the release workflow. Before packaging, the workflow verifies tag/version consistency and runs the loudness, realtime, and transition hardening gates. It then publishes:
 
 - Windows installer `.exe`
 - Windows portable `.zip`
 - Linux `.tar.gz`
+- `BUILD-METADATA.txt`
+- `SHA256SUMS.txt`
 - public, user-facing release notes
 
 ```bash
@@ -161,13 +172,14 @@ See [docs/RELEASE_AUTOMATION.md](docs/RELEASE_AUTOMATION.md).
 ```text
 .github/            GitHub Actions workflows, templates, and funding entry point
 assets/             README and branding assets
+cmake/              pinned build dependency metadata
 data/               OBS plugin data and locale files
 docs/               public docs, policies, release notes, and landing page
 include/            DSP headers
 packaging/windows/  Inno Setup installer script
 scripts/            build/package scripts
 src/                plugin + DSP source
-tests/              smoke tests
+tests/              loudness, realtime, and transition regression tests
 ```
 
 ## License
