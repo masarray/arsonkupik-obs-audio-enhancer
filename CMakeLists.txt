@@ -15,6 +15,7 @@ add_library(arsonkupik_dsp STATIC
     src/arsonkupik_dsp_macros.cpp
     src/arsonkupik_dsp_processing.cpp
     src/arsonkupik_presets.cpp
+    src/arsonkupik_transition.cpp
 )
 target_include_directories(arsonkupik_dsp PUBLIC include)
 set_target_properties(arsonkupik_dsp PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -73,4 +74,7 @@ if (BUILD_STANDALONE_TESTS)
 
     add_executable(arsonkupik_dsp_hardening tests/dsp_hardening_test.cpp)
     target_link_libraries(arsonkupik_dsp_hardening PRIVATE arsonkupik_dsp)
+
+    add_executable(arsonkupik_transition_hardening tests/preset_transition_test.cpp)
+    target_link_libraries(arsonkupik_transition_hardening PRIVATE arsonkupik_dsp)
 endif()
