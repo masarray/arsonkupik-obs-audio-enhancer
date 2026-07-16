@@ -4,14 +4,55 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  validate:
+    name: Validate release tag and DSP gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate semantic version and release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tag must match vX.Y.Z, received: $TAG" >&2
+            exit 1
+          fi
+          PROJECT_VERSION="$(sed -nE 's/.*VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -n 1)"
+          if [[ -z "$PROJECT_VERSION" || "v${PROJECT_VERSION}" != "$TAG" ]]; then
+            echo "Tag $TAG does not match CMake project version ${PROJECT_VERSION:-missing}." >&2
+            exit 1
+          fi
+          test -f "docs/releases/${TAG}.md"
+          OBS_VERSION="$(tr -d '\r\n ' < cmake/OBS_VERSION.txt)"
+          if [[ ! "$OBS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Pinned OBS version is invalid: $OBS_VERSION" >&2
+            exit 1
+          fi
+          echo "Validated ArSonKuPik $TAG with pinned OBS Studio $OBS_VERSION"
+      - name: Configure standalone validation
+        run: cmake -S . -B build-test -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
+      - name: Build standalone validation
+        run: cmake --build build-test --config Release
+      - name: Run multi-level loudness matrix
+        run: ./build-test/arsonkupik_dsp_smoke
+      - name: Run realtime engine hardening
+        run: ./build-test/arsonkupik_dsp_hardening
+      - name: Run preset and bypass transitions
+        run: ./build-test/arsonkupik_transition_hardening
+
   build-windows:
     name: Build Windows release assets
+    needs: validate
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +65,7 @@ jobs:
           if (-not $vsInstall) { throw 'Visual Studio C++ toolchain was not found.' }
           $vsDevCmd = Join-Path $vsInstall 'Common7\Tools\VsDevCmd.bat'
           $script = Join-Path $PWD 'scripts\build-windows-from-obs-release.ps1'
-          cmd /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 && powershell -NoProfile -ExecutionPolicy Bypass -File `"$script`" -OBSVersion latest"
+          cmd /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 && powershell -NoProfile -ExecutionPolicy Bypass -File `"$script`" -OBSVersion pinned"
 
       - name: Build Windows portable ZIP
         shell: pwsh
@@ -44,16 +85,19 @@ jobs:
           $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
           if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler not found.' }
           & $iscc "/DMyAppVersion=$version" "/DSourcePackageDir=$PWD\package-programdata\arsonkupik-obs-audio-enhancer" "$PWD\packaging\windows\arsonkupik-obs-audio-enhancer.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE." }
 
       - uses: actions/upload-artifact@v4
         with:
           name: release-windows-assets
+          if-no-files-found: error
           path: |
             ArSonKuPik-OBS-Audio-Enhancer-Windows-x64-*.zip
             packaging/windows/output/*.exe
 
   build-linux:
     name: Build Linux release asset
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -72,29 +116,46 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: release-linux-assets
+          if-no-files-found: error
           path: ArSonKuPik-OBS-Audio-Enhancer-Linux-x64-*.tar.gz
 
   github-release:
     name: Publish GitHub release
     runs-on: ubuntu-latest
-    needs: [build-windows, build-linux]
+    needs: [validate, build-windows, build-linux]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
-      - name: Resolve release notes
-        id: notes
+      - name: Prepare flat release assets and checksums
+        shell: bash
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          if [ -f "docs/releases/${TAG}.md" ]; then
-            echo "file=docs/releases/${TAG}.md" >> "$GITHUB_OUTPUT"
-          else
-            echo "file=docs/releases/latest.md" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          mkdir -p dist
+          find release-assets -type f \( -name '*.exe' -o -name '*.zip' -o -name '*.tar.gz' \) -exec cp {} dist/ \;
+          ASSET_COUNT="$(find dist -maxdepth 1 -type f | wc -l | tr -d ' ')"
+          if [[ "$ASSET_COUNT" != "3" ]]; then
+            echo "Expected exactly three binary release assets, found $ASSET_COUNT." >&2
+            find dist -maxdepth 1 -type f -print
+            exit 1
           fi
+          OBS_VERSION="$(tr -d '\r\n ' < cmake/OBS_VERSION.txt)"
+          cat > dist/BUILD-METADATA.txt <<EOF
+          ArSonKuPik version: ${GITHUB_REF_NAME}
+          Source commit: ${GITHUB_SHA}
+          OBS Studio build dependency: ${OBS_VERSION}
+          Windows runner: windows-latest
+          Linux runner: ubuntu-latest
+          EOF
+          (
+            cd dist
+            sha256sum *.exe *.zip *.tar.gz BUILD-METADATA.txt > SHA256SUMS.txt
+          )
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-assets/**/*
-          body_path: ${{ steps.notes.outputs.file }}
+          files: dist/*
+          body_path: docs/releases/${{ github.ref_name }}.md
           generate_release_notes: false
+          fail_on_unmatched_files: true
