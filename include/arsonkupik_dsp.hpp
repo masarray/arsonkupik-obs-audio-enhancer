@@ -29,7 +29,10 @@ enum class EqType {
 };
 
 struct EqBand {
-    std::string id;
+    // Factory EQ identifiers are static string literals used for documentation
+    // and debugging only. A pointer avoids std::string allocation when presets
+    // are copied on the realtime audio thread.
+    const char* id = "";
     EqType type = EqType::Bell;
     double frequency = 1000.0;
     double gain_db = 0.0;
