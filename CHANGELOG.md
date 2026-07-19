@@ -2,21 +2,32 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
 ## [0.4.15] - 2026-07-16
 ### Changed
+- Replaced the OBS-only transition implementation with a shared, allocation-free preset and bypass transition processor used by both the plugin wrapper and standalone regression tests.
+- Expanded preset loudness validation to a five-level matrix from -18 dBFS through -1 dBFS, including RMS benefit, peak ceiling, crest-factor loss, gain-reduction, and finite-output gates.
+- Added an OBS-equivalent rapid transition matrix covering all factory presets, bypass changes, 44.1/48/96 kHz sample rates, 64–1024 frame blocks, and 2–20 ms preset request intervals.
 - Added subsystem-level dirty application so stereo-only, trim-only, and bypass-only changes no longer rebuild unrelated EQ, color, width, or compressor sections.
 - Added a settled hard-bypass fast path that preserves exact pass-through audio and avoids running the creative DSP chain while bypass remains fully engaged.
 - Moved fixed wow calibration into each stable preset definition instead of relying on factory-preset vector order.
 - Unified standalone and OBS defaults through `default_runtime_params()` and `default_engine_params()`.
 - Kept color, compressor, and stereo processor state warm through neutral control positions to avoid hard threshold re-entry.
-- Added regression checks for selective rebuild behavior, hard-bypass pass-through, and zero steady-state bypass allocations.
-
-## [Unreleased]
-### Changed
-- Replaced the OBS-only transition implementation with a shared, allocation-free preset and bypass transition processor used by both the plugin wrapper and standalone regression tests.
-- Added an OBS-equivalent rapid transition matrix covering all factory presets, bypass changes, 44.1/48/96 kHz sample rates, 64–1024 frame blocks, and 2–20 ms preset request intervals.
-- Expanded preset loudness validation from one moderate synthetic level to a five-level matrix from -18 dBFS through -1 dBFS, including RMS benefit, peak ceiling, crest-factor loss, gain-reduction, and finite-output gates.
 - Made factory EQ identifiers static metadata so preset copies do not allocate strings on the realtime audio thread.
+
+### Quality and release engineering
+- Registered all standalone DSP validation executables with CTest for a single consistent local and CI test entry point.
+- Added AddressSanitizer and UndefinedBehaviorSanitizer CI coverage with leak detection and fail-fast runtime settings.
+- Pinned every reusable GitHub Action to a full immutable commit SHA and added weekly Dependabot updates for those pins.
+- Updated GitHub Pages artifact publishing to the current v4 line while preserving the dedicated Pages deployment workflow.
+- Removed the third-party release publishing action and now publishes or updates tagged releases through the authenticated GitHub CLI.
+- Kept release creation gated by semantic-version validation, pinned OBS dependency validation, all registered DSP tests, platform builds, checksums, and build metadata.
+
+### Validation
+- Added regression checks for selective rebuild behavior, hard-bypass pass-through, and zero steady-state bypass allocations.
+- Added CTest execution to release validation and Linux plugin CI so all registered gates are executed consistently.
+- Documented the stereo/front-LR processing policy for multichannel OBS sources.
 
 ## [0.4.14] - 2026-07-15
 ### Changed
