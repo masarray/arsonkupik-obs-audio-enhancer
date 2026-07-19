@@ -5,16 +5,23 @@ on:
     branches: [main, master]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '23 3 * * 1'
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   windows-build:
     name: Windows build smoke
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Setup Visual Studio environment
         shell: pwsh
         run: |
@@ -25,39 +32,63 @@ jobs:
           $script = Join-Path $PWD 'scripts\build-windows-from-obs-release.ps1'
           cmd /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 && powershell -NoProfile -ExecutionPolicy Bypass -File `"$script`" -OBSVersion pinned"
       - name: Upload Windows package artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-package-programdata
           path: package-programdata
+          if-no-files-found: error
 
-  dsp-smoke-test:
-    name: DSP loudness, realtime, and transition hardening
+  dsp-validation:
+    name: CTest DSP quality gates
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Configure
-        run: cmake -S . -B build-test -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
+        run: cmake -S . -B build-test -DCMAKE_BUILD_TYPE=Release -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON -DBUILD_TESTING=ON
       - name: Build
-        run: cmake --build build-test --config Release
-      - name: Run multi-level preset loudness and clipping matrix
-        run: ./build-test/arsonkupik_dsp_smoke
-      - name: Run realtime DSP hardening test
-        run: ./build-test/arsonkupik_dsp_hardening
-      - name: Run OBS-equivalent preset and bypass transition test
-        run: ./build-test/arsonkupik_transition_hardening
+        run: cmake --build build-test --config Release --parallel
+      - name: Run registered DSP tests
+        run: ctest --test-dir build-test --build-config Release --output-on-failure --timeout 180
+
+  sanitizers:
+    name: Address and undefined behavior sanitizers
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Configure sanitizer build
+        run: >-
+          cmake -S . -B build-sanitize
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DBUILD_OBS_PLUGIN=OFF
+          -DBUILD_STANDALONE_TESTS=ON
+          -DBUILD_TESTING=ON
+          -DCMAKE_CXX_FLAGS="-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - name: Build sanitizer targets
+        run: cmake --build build-sanitize --config RelWithDebInfo --parallel
+      - name: Run sanitizer regression suite
+        env:
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:check_initialization_order=1:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --test-dir build-sanitize --build-config RelWithDebInfo --output-on-failure --timeout 180
 
   linux-plugin-build:
     name: Linux plugin build smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build pkg-config libobs-dev
       - name: Configure
-        run: cmake -S . -B build-linux -DCMAKE_BUILD_TYPE=Release -DBUILD_OBS_PLUGIN=ON -DBUILD_STANDALONE_TESTS=ON
+        run: cmake -S . -B build-linux -DCMAKE_BUILD_TYPE=Release -DBUILD_OBS_PLUGIN=ON -DBUILD_STANDALONE_TESTS=ON -DBUILD_TESTING=ON
       - name: Build
-        run: cmake --build build-linux --config Release
+        run: cmake --build build-linux --config Release --parallel
+      - name: Run registered DSP tests
+        run: ctest --test-dir build-linux --build-config Release --output-on-failure --timeout 180
       - name: Install package tree
         run: cmake --install build-linux --config Release --prefix package-linux
