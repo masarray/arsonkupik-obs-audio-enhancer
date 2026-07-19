@@ -23,6 +23,24 @@ Changing the OBS dependency requires an explicit reviewed commit. Rebuilding the
 
 Local Windows builds use the pinned version by default. `-OBSVersion latest` remains available only as an intentional compatibility experiment and must not be used for official release assets.
 
+## Registered test suite
+
+All standalone quality gates are registered with CTest:
+
+```text
+dsp.preset_loudness
+dsp.realtime_hardening
+dsp.transition_hardening
+```
+
+Local and CI validation use the same entry point:
+
+```bash
+ctest --test-dir build-test --build-config Release --output-on-failure --timeout 180
+```
+
+This avoids drift between local commands, pull-request validation, Linux plugin CI, and tagged release validation.
+
 ## Mandatory release validation
 
 Before any platform packaging starts, the release workflow verifies:
@@ -31,11 +49,25 @@ Before any platform packaging starts, the release workflow verifies:
 2. the tag exactly matches the version in `CMakeLists.txt`;
 3. `docs/releases/<tag>.md` exists;
 4. `cmake/OBS_VERSION.txt` contains a valid pinned version;
-5. the multi-level loudness matrix passes;
-6. realtime engine hardening passes;
-7. preset and bypass transition hardening passes.
+5. the registered multi-level loudness test passes;
+6. the registered realtime engine hardening test passes;
+7. the registered preset and bypass transition test passes.
 
 Windows and Linux packaging jobs depend on this validation job. A failing DSP gate cannot publish a release.
+
+## Sanitizer coverage
+
+CI also builds the standalone engine with AddressSanitizer and UndefinedBehaviorSanitizer. The sanitizer job enables leak detection, stack traces, and fail-fast behavior, then executes the same registered CTest suite.
+
+This job runs on pull requests, pushes to `main`, manual CI runs, and the weekly scheduled validation. Sanitizers complement the native Windows and Linux plugin builds; they do not replace native OBS listening checks.
+
+## GitHub Actions supply-chain policy
+
+Reusable GitHub Actions are pinned to immutable full commit SHAs rather than floating version labels. Inline comments retain the human-readable major version.
+
+`.github/dependabot.yml` checks those pins weekly and groups available GitHub Actions updates into a reviewable pull request. Updates must still pass the complete CI suite before merging.
+
+The release publisher uses the authenticated GitHub CLI supplied by the hosted runner. No third-party release-publishing action is required.
 
 ## Published assets
 
@@ -58,7 +90,8 @@ Before creating a tag, confirm:
 - [ ] `docs/releases/latest.md` matches the intended release.
 - [ ] landing-page structured data reports the intended version.
 - [ ] `cmake/OBS_VERSION.txt` points to the tested OBS dependency.
-- [ ] multi-level loudness, realtime hardening, and transition tests pass.
+- [ ] CTest passes locally or in the latest pull-request CI.
+- [ ] sanitizer CI passes.
 - [ ] Windows and Linux CI builds pass on `main`.
 - [ ] native OBS listening checks pass with music, voice, hot mastered audio, rapid controls, preset switching, and bypass transitions.
 - [ ] no build outputs, installers, archives, or dependency caches are staged in Git.
@@ -89,11 +122,11 @@ git push origin vX.Y.Z
 
 GitHub Actions then runs:
 
-1. tag, version, release-note, dependency, and DSP validation;
+1. tag, version, release-note, dependency, and registered CTest validation;
 2. Windows installer and portable build;
 3. Linux package build;
 4. release-asset flattening, metadata generation, and SHA-256 checksums;
-5. GitHub Release publication after all dependencies succeed.
+5. GitHub Release creation or update through the authenticated GitHub CLI after all dependencies succeed.
 
 ## Verifying downloaded assets
 
@@ -128,4 +161,4 @@ When a public release already exists, publish a new patch version instead of rew
 
 ## GitHub Pages
 
-Landing-page changes are deployed from `main` by the dedicated Pages workflow. Tagged releases never deploy the Pages environment and require no Pages or identity-token permissions.
+Landing-page changes are deployed from `main` by the dedicated Pages workflow. The Pages pipeline uses pinned `configure-pages`, `upload-pages-artifact`, and `deploy-pages` actions. Tagged releases never deploy the Pages environment and require no Pages or identity-token permissions.
