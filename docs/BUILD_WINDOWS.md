@@ -37,15 +37,33 @@ install_plugin_windows.bat
 
 ## Standalone DSP validation
 
+Configure, build, and run all registered tests through CTest:
+
 ```powershell
-cmake -S . -B build-dsp -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON
+cmake -S . -B build-dsp -DBUILD_OBS_PLUGIN=OFF -DBUILD_STANDALONE_TESTS=ON -DBUILD_TESTING=ON
 cmake --build build-dsp --config Release
-.\build-dsp\Release\arsonkupik_dsp_smoke.exe
-.\build-dsp\Release\arsonkupik_dsp_hardening.exe
-.\build-dsp\Release\arsonkupik_transition_hardening.exe
+ctest --test-dir build-dsp --build-config Release --output-on-failure --timeout 180
 ```
 
-These executables validate multi-level loudness behavior, realtime allocation and dynamics safeguards, selective subsystem rebuilds, settled hard bypass, and preset/bypass transitions.
+The registered suite validates multi-level loudness behavior, realtime allocation and dynamics safeguards, selective subsystem rebuilds, settled hard bypass, and preset/bypass transitions. Individual executables remain available under `build-dsp\Release\` for focused debugging.
+
+## Sanitizer validation on Linux or WSL
+
+```bash
+cmake -S . -B build-sanitize \
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DBUILD_OBS_PLUGIN=OFF \
+  -DBUILD_STANDALONE_TESTS=ON \
+  -DBUILD_TESTING=ON \
+  -DCMAKE_CXX_FLAGS="-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer" \
+  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+cmake --build build-sanitize --parallel
+ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 \
+UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 \
+ctest --test-dir build-sanitize --output-on-failure --timeout 180
+```
+
+CI runs the sanitizer suite automatically in addition to Windows and Linux native plugin builds.
 
 ## Explicit OBS-version override
 

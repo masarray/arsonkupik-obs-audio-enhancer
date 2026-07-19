@@ -10,6 +10,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(BUILD_OBS_PLUGIN "Build native OBS plugin target" ON)
 option(BUILD_STANDALONE_TESTS "Build standalone DSP smoke tests" ON)
 
+include(CTest)
+
 add_library(arsonkupik_dsp STATIC
     src/arsonkupik_dsp.cpp
     src/arsonkupik_dsp_macros.cpp
@@ -77,4 +79,16 @@ if (BUILD_STANDALONE_TESTS)
 
     add_executable(arsonkupik_transition_hardening tests/preset_transition_test.cpp)
     target_link_libraries(arsonkupik_transition_hardening PRIVATE arsonkupik_dsp)
+
+    if (BUILD_TESTING)
+        add_test(NAME dsp.preset_loudness COMMAND arsonkupik_dsp_smoke)
+        add_test(NAME dsp.realtime_hardening COMMAND arsonkupik_dsp_hardening)
+        add_test(NAME dsp.transition_hardening COMMAND arsonkupik_transition_hardening)
+        set_tests_properties(
+            dsp.preset_loudness
+            dsp.realtime_hardening
+            dsp.transition_hardening
+            PROPERTIES TIMEOUT 180
+        )
+    endif()
 endif()
